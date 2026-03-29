@@ -13,18 +13,17 @@ export function buildDefaultFilename(canvasName: string, date: Date): string {
   return `robinwater-export-${safe}-${yyyy}-${mm}-${dd}.txt`;
 }
 
-export function buildExportText(canvas: Canvas): string {
+export function buildExportText(canvas: Canvas, date: Date = new Date()): string {
   const lines: string[] = [];
 
   // Header
-  const now = new Date();
   const dateStr = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0'),
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
   ].join('-') + ' ' + [
-    String(now.getHours()).padStart(2, '0'),
-    String(now.getMinutes()).padStart(2, '0'),
+    String(date.getHours()).padStart(2, '0'),
+    String(date.getMinutes()).padStart(2, '0'),
   ].join(':');
 
   lines.push('=====================================');
@@ -93,7 +92,7 @@ export function buildExportText(canvas: Canvas): string {
 
     // DFS from root — depth determines indentation, visited set handles cycles
     const dfsVisited = new Set<string>();
-    function dfs(id: string, depth: number): void {
+    const dfs = (id: string, depth: number): void => {
       dfsVisited.add(id);
       const idea = ideaById.get(id)!;
       const ideaIndent = ' '.repeat(depth * 4);
@@ -105,7 +104,7 @@ export function buildExportText(canvas: Canvas): string {
         lines.push('');
         dfs(child, depth + 1);
       }
-    }
+    };
     dfs(root, 0);
   }
 
