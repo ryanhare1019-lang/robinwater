@@ -23,6 +23,22 @@ export function Canvas() {
   const ideas = canvas?.ideas || [];
   const viewport = canvas?.viewport || { x: 0, y: 0, zoom: 1 };
 
+  // Refs for direct DOM manipulation — avoids React re-renders during pan/zoom
+  const transformRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef(viewport);
+  const zoomCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep ref in sync when store changes (e.g. Ctrl+0 reset)
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
+  const applyTransform = useCallback((x: number, y: number, zoom: number) => {
+    if (transformRef.current) {
+      transformRef.current.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
+    }
+  }, []);
+
   const [isPanning, setIsPanning] = useState(false);
   const panning = useRef(false);
   const panStart = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
@@ -41,30 +57,31 @@ export function Canvas() {
         panStart.current = {
           x: e.clientX,
           y: e.clientY,
-          vx: viewport.x,
-          vy: viewport.y,
+          vx: viewportRef.current.x,
+          vy: viewportRef.current.y,
         };
         setSelectedId(null);
         setContextMenu(null, null);
       }
     },
-    [viewport.x, viewport.y, setSelectedId, connectingFrom, setConnectingFrom, setContextMenu]
+    [setSelectedId, connectingFrom, setConnectingFrom, setContextMenu]
   );
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!panning.current) return;
-      const dx = e.clientX - panStart.current.x;
-      const dy = e.clientY - panStart.current.y;
-      setViewport({
-        x: panStart.current.vx + dx,
-        y: panStart.current.vy + dy,
-      });
+      const newX = panStart.current.vx + (e.clientX - panStart.current.x);
+      const newY = panStart.current.vy + (e.clientY - panStart.current.y);
+      viewportRef.current = { ...viewportRef.current, x: newX, y: newY };
+      applyTransform(newX, newY, viewportRef.current.zoom);
     };
 
     const onUp = () => {
+      if (!panning.current) return;
       panning.current = false;
       setIsPanning(false);
+      // Commit final position to store once, not on every mousemove
+      setViewport({ x: viewportRef.current.x, y: viewportRef.current.y });
     };
 
     window.addEventListener("mousemove", onMove);
@@ -73,25 +90,30 @@ export function Canvas() {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [setViewport]);
+  }, [setViewport, applyTransform]);
 
   const onWheel = useCallback(
     (e: React.WheelEvent) => {
       e.preventDefault();
+      const vp = viewportRef.current;
       const delta = e.deltaY > 0 ? 0.92 : 1.08;
-      const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, viewport.zoom * delta));
-      if (newZoom === viewport.zoom) return;
-      const ratio = newZoom / viewport.zoom;
-      const cx = e.clientX;
-      const cy = e.clientY;
+      const newZoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, vp.zoom * delta));
+      if (newZoom === vp.zoom) return;
+      const ratio = newZoom / vp.zoom;
+      const newX = e.clientX - ratio * (e.clientX - vp.x);
+      const newY = e.clientY - ratio * (e.clientY - vp.y);
 
-      setViewport({
-        zoom: newZoom,
-        x: cx - ratio * (cx - viewport.x),
-        y: cy - ratio * (cy - viewport.y),
-      });
+      viewportRef.current = { x: newX, y: newY, zoom: newZoom };
+      applyTransform(newX, newY, newZoom);
+
+      // Debounce store commit so we don't re-render on every wheel tick
+      if (zoomCommitTimer.current) clearTimeout(zoomCommitTimer.current);
+      zoomCommitTimer.current = setTimeout(() => {
+        setViewport(viewportRef.current);
+        zoomCommitTimer.current = null;
+      }, 80);
     },
-    [viewport, setViewport]
+    [setViewport, applyTransform]
   );
 
   useEffect(() => {
@@ -124,6 +146,7 @@ export function Canvas() {
       }}
     >
       <div
+        ref={transformRef}
         style={{
           transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
           transformOrigin: "0 0",
@@ -132,7 +155,7 @@ export function Canvas() {
           left: 0,
           width: 0,
           height: 0,
-          transition: "none",
+          willChange: "transform",
         }}
       >
         <Background />

@@ -6,34 +6,82 @@ on:
       - 'v*'
 
 jobs:
-  release:
+  # Phase 1: Create the GitHub release (draft) and get its ID
+  create-release:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create.outputs.releaseId }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Get version
+        id: ver
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Create draft release
+        id: create
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Robinwater ${{ github.ref_name }}
+          releaseBody: |
+            ## Install Robinwater ${{ github.ref_name }}
+
+            Download the file for your operating system below.
+
+            | Platform | File to download |
+            |---|---|
+            | **macOS — Apple Silicon** (M1/M2/M3/M4) | `Robinwater_${{ steps.ver.outputs.VERSION }}_aarch64.dmg` |
+            | **macOS — Intel** | `Robinwater_${{ steps.ver.outputs.VERSION }}_x64.dmg` |
+            | **Windows** | `Robinwater_${{ steps.ver.outputs.VERSION }}_x64-setup.exe` |
+            | **Linux — Debian / Ubuntu** | `robinwater_${{ steps.ver.outputs.VERSION }}_amd64.deb` |
+            | **Linux — Other distros** | `robinwater_${{ steps.ver.outputs.VERSION }}_amd64.AppImage` |
+
+            ### Installation notes
+            - **macOS**: Open the `.dmg`, drag Robinwater to Applications, and launch it. If you see "unidentified developer", right-click the app → Open.
+            - **Windows**: Run the `.exe` installer. If Windows SmartScreen appears, click "More info" → "Run anyway".
+            - **Linux `.deb`**: `sudo dpkg -i robinwater_*_amd64.deb`
+            - **Linux `.AppImage`**: `chmod +x robinwater_*_amd64.AppImage` then run it directly — no install needed.
+          releaseDraft: true
+          prerelease: false
+
+  # Phase 2: Build on each platform and attach artifacts to the draft release
+  build:
+    needs: create-release
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
         include:
-          # macOS Apple Silicon
           - platform: macos-latest
             args: --target aarch64-apple-darwin
-          # macOS Intel
           - platform: macos-latest
             args: --target x86_64-apple-darwin
-          # Linux
           - platform: ubuntu-22.04
             args: ''
-          # Windows
           - platform: windows-latest
             args: ''
 
     runs-on: ${{ matrix.platform }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: npm
@@ -56,28 +104,31 @@ jobs:
       - name: Install frontend dependencies
         run: npm install
 
-      - name: Build and release
+      - name: Build and upload
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Robinwater ${{ github.ref_name }}
-          releaseBody: |
-            ## Download
-
-            | Platform | File |
-            |----------|------|
-            | macOS (Apple Silicon) | `Robinwater_*_aarch64.dmg` |
-            | macOS (Intel) | `Robinwater_*_x64.dmg` |
-            | Windows | `Robinwater_*_x64-setup.exe` or `Robinwater_*_x64_en-US.msi` |
-            | Linux (Debian/Ubuntu) | `robinwater_*_amd64.deb` |
-            | Linux (AppImage) | `robinwater_*_amd64.AppImage` |
-
-            Download the file for your platform, open it, and install normally.
-
-            **macOS**: If you see "unidentified developer", right-click the app and choose Open.
-            **Windows**: If Windows SmartScreen appears, click "More info" → "Run anyway".
-          releaseDraft: false
-          prerelease: false
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
+
+  # Phase 3: Publish the draft once all builds succeed
+  publish-release:
+    needs: [create-release, build]
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Publish release
+        uses: actions/github-script@v7
+        env:
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+        with:
+          script: |
+            github.rest.repos.updateRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              release_id: process.env.RELEASE_ID,
+              draft: false
+            })
