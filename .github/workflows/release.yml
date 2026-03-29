@@ -101,6 +101,10 @@ jobs:
             librsvg2-dev \
             patchelf
 
+      - name: Install NSIS (Windows only)
+        if: matrix.platform == 'windows-latest'
+        run: choco install nsis -y
+
       - name: Install frontend dependencies
         run: npm install
 
