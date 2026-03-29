@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/nicegui/main/nicegui/resources/tauri_capabilities.schema.json",
+  "identifier": "default",
+  "description": "Default permissions for Robinwater",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "fs:default",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-meta-recursive",
+    "fs:allow-exists",
+    "fs:allow-mkdir"
+  ]
+}
