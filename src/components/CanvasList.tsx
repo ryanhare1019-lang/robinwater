@@ -1,5 +1,8 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useStore } from "../store/useStore";
+import { buildDefaultFilename, buildExportText } from "../utils/export";
 
 export function CanvasList() {
   const canvases = useStore((s) => s.canvases);
@@ -14,7 +17,11 @@ export function CanvasList() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{ canvasId: string; x: number; y: number } | null>(null);
+  const [exportedId, setExportedId] = useState<string | null>(null);
+
   const deleteTimer = useRef<ReturnType<typeof setTimeout>>();
+  const exportTimer = useRef<ReturnType<typeof setTimeout>>();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const startRename = useCallback((id: string, name: string) => {
@@ -24,9 +31,7 @@ export function CanvasList() {
   }, []);
 
   const finishRename = useCallback(() => {
-    if (editingId && editName.trim()) {
-      renameCanvas(editingId, editName.trim());
-    }
+    if (editingId && editName.trim()) renameCanvas(editingId, editName.trim());
     setEditingId(null);
   }, [editingId, editName, renameCanvas]);
 
@@ -43,6 +48,61 @@ export function CanvasList() {
     },
     [deletingId, deleteCanvas]
   );
+
+  const handleExport = useCallback(async (canvasId: string) => {
+    setCtxMenu(null);
+    const canvas = canvases.find((c) => c.id === canvasId);
+    if (!canvas) return;
+
+    const filePath = await save({
+      defaultPath: buildDefaultFilename(canvas.name, new Date()),
+      filters: [{ name: "Text Files", extensions: ["txt"] }],
+    });
+
+    if (!filePath) return; // user cancelled
+
+    await writeTextFile(filePath, buildExportText(canvas));
+
+    setExportedId(canvasId);
+    if (exportTimer.current) clearTimeout(exportTimer.current);
+    exportTimer.current = setTimeout(() => setExportedId(null), 2000);
+  }, [canvases]);
+
+  // Close context menu on click-outside or Escape
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest("[data-canvas-ctx-menu]")) {
+        setCtxMenu(null);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setCtxMenu(null);
+    };
+    window.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [ctxMenu]);
+
+  const menuItemStyle: React.CSSProperties = {
+    display: "block",
+    width: "100%",
+    padding: "8px 14px",
+    background: "none",
+    border: "none",
+    color: "var(--text-primary)",
+    fontSize: "11px",
+    fontFamily: "var(--font-mono)",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    textAlign: "left",
+    cursor: "pointer",
+    transition: "background 0.1s ease",
+    borderRadius: 0,
+  };
 
   return (
     <>
@@ -142,6 +202,7 @@ export function CanvasList() {
               const isActive = c.id === activeCanvasId;
               const isEditing = editingId === c.id;
               const isConfirmDelete = deletingId === c.id;
+              const isExported = exportedId === c.id;
 
               return (
                 <div
@@ -149,13 +210,19 @@ export function CanvasList() {
                   onClick={() => {
                     if (!isEditing && !isConfirmDelete) switchCanvas(c.id);
                   }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setCtxMenu({ canvasId: c.id, x: e.clientX, y: e.clientY });
+                  }}
                   style={{
                     padding: "8px 16px",
                     cursor: "pointer",
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    borderLeft: isActive ? "3px solid var(--text-secondary)" : "3px solid transparent",
+                    borderLeft: isActive
+                      ? "3px solid var(--text-secondary)"
+                      : "3px solid transparent",
                     background: isActive ? "var(--bg-active)" : "transparent",
                     color: isActive ? "var(--text-primary)" : "var(--text-secondary)",
                     fontSize: "var(--body-size)",
@@ -171,7 +238,16 @@ export function CanvasList() {
                   }}
                 >
                   {isConfirmDelete ? (
-                    <div style={{ display: "flex", gap: 8, fontSize: "var(--label-size)", textTransform: "uppercase", letterSpacing: "0.05em", alignItems: "center" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        fontSize: "var(--label-size)",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        alignItems: "center",
+                      }}
+                    >
                       <span style={{ color: "var(--accent-red)" }}>DELETE?</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
@@ -241,23 +317,22 @@ export function CanvasList() {
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
+                          color: isExported ? "#44AA66" : undefined,
+                          transition: "color 0.15s ease",
                         }}
                         onDoubleClick={(e) => {
                           e.stopPropagation();
                           startRename(c.id, c.name);
                         }}
                       >
-                        {c.name}
+                        {isExported ? "✓ EXPORTED" : c.name}
                       </span>
                       <span style={{ fontSize: "var(--label-size)", color: "var(--text-tertiary)" }}>
                         {c.ideas.length}
                       </span>
                       {canvases.length > 1 && (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(c.id);
-                          }}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
                           style={{
                             background: "none",
                             border: "none",
@@ -306,6 +381,33 @@ export function CanvasList() {
               + NEW CANVAS
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Canvas right-click context menu */}
+      {ctxMenu && (
+        <div
+          data-canvas-ctx-menu=""
+          style={{
+            position: "fixed",
+            left: ctxMenu.x,
+            top: ctxMenu.y,
+            zIndex: 3000,
+            background: "var(--bg-raised)",
+            border: "1px solid var(--border-default)",
+            borderRadius: 0,
+            padding: 0,
+            minWidth: 140,
+          }}
+        >
+          <button
+            onClick={() => handleExport(ctxMenu.canvasId)}
+            style={menuItemStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-active)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+          >
+            ↗ EXPORT
+          </button>
         </div>
       )}
     </>
