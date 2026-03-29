@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicegui/nicegui/main/nicegui/resources/tauri_capabilities.schema.json",
+  "$schema": "https://schemas.tauri.app/config/v2/capability",
   "identifier": "default",
   "description": "Default permissions for Robinwater",
   "windows": ["main"],
@@ -12,6 +12,6 @@
     "fs:allow-exists",
     "fs:allow-mkdir",
     "dialog:allow-save",
-    "fs:allow-write"
+    "fs:allow-write-text-file"
   ]
 }
