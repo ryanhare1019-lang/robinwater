@@ -4,6 +4,23 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useStore } from "../store/useStore";
 import { buildDefaultFilename, buildExportText } from "../utils/export";
 
+const menuItemStyle: React.CSSProperties = {
+  display: "block",
+  width: "100%",
+  padding: "8px 14px",
+  background: "none",
+  border: "none",
+  color: "var(--text-primary)",
+  fontSize: "var(--label-size)",
+  fontFamily: "var(--font-mono)",
+  textTransform: "uppercase",
+  letterSpacing: "0.05em",
+  textAlign: "left",
+  cursor: "pointer",
+  transition: "background 0.1s ease",
+  borderRadius: 0,
+};
+
 export function CanvasList() {
   const canvases = useStore((s) => s.canvases);
   const activeCanvasId = useStore((s) => s.activeCanvasId);
@@ -54,19 +71,31 @@ export function CanvasList() {
     const canvas = canvases.find((c) => c.id === canvasId);
     if (!canvas) return;
 
-    const filePath = await save({
-      defaultPath: buildDefaultFilename(canvas.name, new Date()),
-      filters: [{ name: "Text Files", extensions: ["txt"] }],
-    });
+    try {
+      const filePath = await save({
+        defaultPath: buildDefaultFilename(canvas.name, new Date()),
+        filters: [{ name: "Text Files", extensions: ["txt"] }],
+      });
 
-    if (!filePath) return; // user cancelled
+      if (!filePath) return;
 
-    await writeTextFile(filePath, buildExportText(canvas));
+      await writeTextFile(filePath, buildExportText(canvas));
 
-    setExportedId(canvasId);
-    if (exportTimer.current) clearTimeout(exportTimer.current);
-    exportTimer.current = setTimeout(() => setExportedId(null), 2000);
+      setExportedId(canvasId);
+      if (exportTimer.current) clearTimeout(exportTimer.current);
+      exportTimer.current = setTimeout(() => setExportedId(null), 2000);
+    } catch (err) {
+      console.error("Export failed:", err);
+    }
   }, [canvases]);
+
+  // Clear timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(deleteTimer.current);
+      clearTimeout(exportTimer.current);
+    };
+  }, []);
 
   // Close context menu on click-outside or Escape
   useEffect(() => {
@@ -86,23 +115,6 @@ export function CanvasList() {
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [ctxMenu]);
-
-  const menuItemStyle: React.CSSProperties = {
-    display: "block",
-    width: "100%",
-    padding: "8px 14px",
-    background: "none",
-    border: "none",
-    color: "var(--text-primary)",
-    fontSize: "11px",
-    fontFamily: "var(--font-mono)",
-    textTransform: "uppercase",
-    letterSpacing: "0.05em",
-    textAlign: "left",
-    cursor: "pointer",
-    transition: "background 0.1s ease",
-    borderRadius: 0,
-  };
 
   return (
     <>
@@ -212,7 +224,9 @@ export function CanvasList() {
                   }}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    setCtxMenu({ canvasId: c.id, x: e.clientX, y: e.clientY });
+                    const x = Math.min(e.clientX, window.innerWidth - 148);
+                    const y = Math.min(e.clientY, window.innerHeight - 44);
+                    setCtxMenu({ canvasId: c.id, x, y });
                   }}
                   style={{
                     padding: "8px 16px",
