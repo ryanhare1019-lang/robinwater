@@ -15,37 +15,23 @@ Add an export feature to Robinwater that writes all ideas from a selected canvas
 | File | Change |
 |---|---|
 | `src/utils/export.ts` | New — pure TS cluster algorithm + text formatter |
-| `src/components/ExportModal.tsx` | New — canvas picker panel |
-| `src/components/CanvasList.tsx` | Modified — export button, modal state, confirmation flash |
+| `src/components/CanvasList.tsx` | Modified — right-click context menu on canvas rows, confirmation flash |
 | `src-tauri/Cargo.toml` | Add `tauri-plugin-dialog = "2"` |
 | `src-tauri/src/lib.rs` | Register `tauri_plugin_dialog::init()` |
 | `src-tauri/capabilities/default.json` | Add `dialog:allow-save` + `fs:allow-write` |
 
 ---
 
-## Export Button (CanvasList.tsx)
+## Right-Click Context Menu on Canvas Rows (CanvasList.tsx)
 
-**Placement:** Bottom of the expanded left sidebar, below the `+ NEW CANVAS` button, separated by a `1px solid #1A1A1A` horizontal divider.
+Right-clicking any canvas row in the sidebar opens a small context menu. The canvas being right-clicked is the export target — no picker needed.
 
-**Style:**
-- Text: `↗ EXPORT` — monospaced, uppercase, `11px`, `#555555`, `letter-spacing: 0.1em`
-- Hover: text brightens to `#999999`
-- No background, no border — plain text button matching sidebar aesthetic
+**Menu items:**
+- `↗ EXPORT` — triggers export flow for that canvas
 
-**Confirmation flash:** After a successful export, button text changes to `✓ EXPORTED` in `#44AA66` for 2 seconds then reverts. If the user cancels the save dialog, nothing happens and the modal stays open.
+**Style:** Matches the existing `ContextMenu.tsx` pattern — `background: #0F0F0F`, `border: 1px solid #222`, mono font, `11px`, uppercase. Positioned at the cursor. Closes on click-outside or Escape.
 
----
-
-## Canvas Picker (ExportModal.tsx)
-
-A small floating panel anchored `bottom: 100%` above the export button, full sidebar width. Rendered inside the sidebar's DOM (not a page-level portal), so it sits naturally within the existing layout.
-
-**Style:** `background: #0A0A0A`, `border: 1px solid #222`, mono font. Each canvas is a clickable row matching the existing CanvasList row style — `12px`, uppercase, monospaced, bordered rows.
-
-**Behaviour:**
-- Opens when `↗ EXPORT` is clicked and there are 2+ canvases
-- Closes on: Escape, click outside, or after successful export
-- Single-canvas shortcut: if only one canvas exists, skip the picker entirely and go straight to the save dialog for the active canvas
+**Confirmation flash:** After a successful export, the canvas row briefly shows `✓ EXPORTED` in `#44AA66` for 2 seconds then reverts to the canvas name. If the user cancels the save dialog, nothing happens.
 
 ---
 
@@ -202,9 +188,8 @@ Add to `permissions`:
 
 ## Quality Checklist
 
-- [ ] Export button appears in left sidebar with correct styling
-- [ ] Canvas picker modal appears and lists all canvases (2+ canvas case)
-- [ ] Single canvas skips picker, goes straight to save dialog
+- [ ] Right-clicking a canvas row opens context menu with `↗ EXPORT`
+- [ ] Context menu closes on Escape and click-outside
 - [ ] Native save dialog opens with correct default filename
 - [ ] Exported file has correct header with canvas name and date
 - [ ] Connected ideas grouped into clusters with correct indentation
@@ -212,6 +197,5 @@ Add to `permissions`:
 - [ ] Standalone ideas listed separately
 - [ ] Empty canvas exports gracefully
 - [ ] Tauri permissions configured for dialog + fs write
-- [ ] Confirmation flash shows after successful export
-- [ ] Cancel save dialog → modal stays open, no flash
-- [ ] Modal closes on Escape and click-outside
+- [ ] Canvas row flashes `✓ EXPORTED` for 2 seconds after successful export
+- [ ] Cancel save dialog → no flash, no file written
