@@ -18,6 +18,8 @@ export function Canvas() {
   const setContextMenu = useStore((s) => s.setContextMenu);
   const connectingFrom = useStore((s) => s.connectingFrom);
   const setConnectingFrom = useStore((s) => s.setConnectingFrom);
+  const deleteIdea = useStore((s) => s.deleteIdea);
+  const setDeletingNodeId = useStore((s) => s.setDeletingNodeId);
 
   const canvas = canvases.find((c) => c.id === activeCanvasId);
   const ideas = canvas?.ideas || [];
@@ -27,6 +29,10 @@ export function Canvas() {
   const transformRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef(viewport);
   const zoomCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Delete confirmation state
+  const [deleteConfirmPending, setDeleteConfirmPending] = useState(false);
+  const deleteConfirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Keep ref in sync when store changes (e.g. Ctrl+0 reset)
   useEffect(() => {
@@ -116,56 +122,117 @@ export function Canvas() {
     [setViewport, applyTransform]
   );
 
+  const cancelDeleteConfirm = useCallback(() => {
+    setDeleteConfirmPending(false);
+    if (deleteConfirmTimer.current) {
+      clearTimeout(deleteConfirmTimer.current);
+      deleteConfirmTimer.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      const inInput = tag === "INPUT" || tag === "TEXTAREA";
+
       if (e.key === "Delete" || e.key === "Backspace") {
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        if (inInput) return;
         if (selectedId) {
-          // Open sidebar (it'll show via selectedId already)
+          e.preventDefault();
+          setDeleteConfirmPending(true);
+          if (deleteConfirmTimer.current) clearTimeout(deleteConfirmTimer.current);
+          deleteConfirmTimer.current = setTimeout(() => {
+            setDeleteConfirmPending(false);
+            deleteConfirmTimer.current = null;
+          }, 4000);
         }
       }
+
+      if (e.key === "Enter" && deleteConfirmPending && selectedId) {
+        e.preventDefault();
+        cancelDeleteConfirm();
+        setDeletingNodeId(selectedId);
+        const idToDelete = selectedId;
+        setTimeout(() => {
+          deleteIdea(idToDelete);
+          setSelectedId(null);
+        }, 250);
+      }
+
+      if (e.key === "Escape" && deleteConfirmPending) {
+        e.preventDefault();
+        cancelDeleteConfirm();
+      }
+
       if (e.ctrlKey && e.key === "0") {
         e.preventDefault();
         setViewport({ x: 0, y: 0, zoom: 1 });
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedId, setViewport]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      if (deleteConfirmTimer.current) clearTimeout(deleteConfirmTimer.current);
+    };
+  }, [selectedId, deleteConfirmPending, setViewport, deleteIdea, setDeletingNodeId, setSelectedId, cancelDeleteConfirm]);
 
   return (
-    <div
-      onMouseDown={onMouseDown}
-      onWheel={onWheel}
-      style={{
-        position: "fixed",
-        inset: 0,
-        overflow: "hidden",
-        cursor: connectingFrom ? "crosshair" : isPanning ? "grabbing" : "grab",
-      }}
-    >
+    <>
       <div
-        ref={transformRef}
+        onMouseDown={onMouseDown}
+        onWheel={onWheel}
         style={{
-          transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-          transformOrigin: "0 0",
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: 0,
-          height: 0,
-          willChange: "transform",
+          position: "fixed",
+          inset: 0,
+          overflow: "hidden",
+          cursor: connectingFrom ? "crosshair" : isPanning ? "grabbing" : "grab",
         }}
       >
-        <Background />
-        <Particles />
-        <SimilarityLines />
-        <ConnectionLines />
-        {ideas.map((idea) => (
-          <IdeaNode key={idea.id} idea={idea} />
-        ))}
+        <div
+          ref={transformRef}
+          style={{
+            transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
+            transformOrigin: "0 0",
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: 0,
+            height: 0,
+            willChange: "transform",
+          }}
+        >
+          <Background />
+          <Particles />
+          <SimilarityLines />
+          <ConnectionLines />
+          {ideas.map((idea) => (
+            <IdeaNode key={idea.id} idea={idea} />
+          ))}
+        </div>
       </div>
-    </div>
+      {deleteConfirmPending && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 80,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "var(--bg-raised)",
+            border: "1px solid var(--accent-red)",
+            color: "var(--accent-red)",
+            padding: "10px 20px",
+            zIndex: 2000,
+            fontFamily: "var(--font-mono)",
+            fontSize: "var(--body-size)",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+          }}
+        >
+          DELETE?&nbsp;&nbsp;[ENTER] confirm&nbsp;&nbsp;[ESC] cancel
+        </div>
+      )}
+    </>
   );
 }

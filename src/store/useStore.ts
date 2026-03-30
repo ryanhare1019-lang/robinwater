@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, TagColor } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, TagColor, CustomTag } from "../types";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
@@ -15,6 +15,7 @@ function createDefaultCanvas(name = "Ideas"): Canvas {
     ideas: [],
     connections: [],
     viewport: { x: 0, y: 0, zoom: 1 },
+    tags: [],
   };
 }
 
@@ -60,6 +61,10 @@ interface AppState {
 
   // Delete animation
   setDeletingNodeId: (id: string | null) => void;
+
+  // Tag management
+  addTag: (name: string, color: string) => void;
+  removeTag: (id: string) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -263,6 +268,29 @@ export const useStore = create<AppState>((set, get) => {
     setContextMenu: (nodeId, pos) => set({ contextMenuNodeId: nodeId, contextMenuPos: pos }),
 
     setDeletingNodeId: (id) => set({ deletingNodeId: id }),
+
+    // Tag management
+    addTag: (name, color) => {
+      const state = get();
+      const tag: CustomTag = { id: generateId(), name, color };
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c, tags: [...(c.tags || []), tag],
+        })),
+      });
+    },
+
+    removeTag: (id) => {
+      const state = get();
+      // Also remove from any ideas that use this tag
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c,
+          tags: (c.tags || []).filter((t) => t.id !== id),
+          ideas: c.ideas.map((idea) => idea.color === id ? { ...idea, color: undefined } : idea),
+        })),
+      });
+    },
   };
 });
 

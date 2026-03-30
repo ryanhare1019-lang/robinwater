@@ -51,6 +51,14 @@ export function IdeaNode({ idea }: Props) {
 
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
+      // Handle right-click: start connect mode
+      if (e.button === 2) {
+        e.preventDefault();
+        e.stopPropagation();
+        setConnectingFrom(idea.id);
+        return;
+      }
+
       if (e.button !== 0) return;
       e.stopPropagation();
 
@@ -86,7 +94,7 @@ export function IdeaNode({ idea }: Props) {
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [idea.id, idea.x, idea.y, updateIdea, connectingFrom, addConnection]
+    [idea.id, idea.x, idea.y, updateIdea, connectingFrom, addConnection, setConnectingFrom]
   );
 
   const onClick = useCallback(
@@ -103,9 +111,11 @@ export function IdeaNode({ idea }: Props) {
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      // Suppress context menu while in connect mode
+      if (connectingFrom !== null) return;
       setContextMenu(idea.id, { x: e.clientX, y: e.clientY });
     },
-    [idea.id, setContextMenu]
+    [idea.id, setContextMenu, connectingFrom]
   );
 
   // Resize handle
@@ -152,7 +162,13 @@ export function IdeaNode({ idea }: Props) {
     ? idea.text.slice(0, 120) + "\u2026"
     : idea.text;
 
-  const tagColors = idea.color ? TAG_COLORS[idea.color] : null;
+  const tagColors = idea.color ? TAG_COLORS[idea.color as keyof typeof TAG_COLORS] : null;
+
+  // Tag border color for selected left border
+  const tagBorderColor =
+    idea.color && TAG_COLORS[idea.color as keyof typeof TAG_COLORS]
+      ? TAG_COLORS[idea.color as keyof typeof TAG_COLORS].dot
+      : "var(--text-secondary)";
 
   // Border logic
   const borderColor = entering
@@ -164,6 +180,8 @@ export function IdeaNode({ idea }: Props) {
     : isHovered
     ? "var(--border-strong)"
     : "var(--border-default)";
+
+  const hasDescription = Boolean(idea.description && idea.description.trim().length > 0);
 
   return (
     <div
@@ -184,7 +202,7 @@ export function IdeaNode({ idea }: Props) {
         background: "var(--bg-surface)",
         border: `1px solid ${borderColor}`,
         borderLeft: isSelected
-          ? "3px solid var(--text-secondary)"
+          ? `3px solid ${tagBorderColor}`
           : `1px solid ${borderColor}`,
         borderRadius: 0,
         color: "var(--text-primary)",
@@ -214,7 +232,7 @@ export function IdeaNode({ idea }: Props) {
         zIndex: isDragging ? 100 : isSelected ? 10 : 1,
       }}
     >
-      {/* Label row: IDEA + date */}
+      {/* Label row: IDEA + description indicator + date */}
       <div
         style={{
           display: "flex",
@@ -229,6 +247,18 @@ export function IdeaNode({ idea }: Props) {
         }}
       >
         <span>IDEA</span>
+        {hasDescription && (
+          <span
+            style={{
+              color: "var(--text-secondary)",
+              fontSize: "10px",
+              opacity: 0.5,
+              lineHeight: 1,
+            }}
+          >
+            ·
+          </span>
+        )}
         <span>{formatDate(idea.createdAt)}</span>
       </div>
 
@@ -245,37 +275,11 @@ export function IdeaNode({ idea }: Props) {
           WebkitBoxOrient: hasCustomSize ? undefined : "vertical",
           overflow: "hidden",
           textOverflow: hasCustomSize ? undefined : "ellipsis",
+          wordBreak: "break-word",
         }}
       >
         {displayText}
       </div>
-
-      {/* Color tag */}
-      {idea.color && tagColors && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            padding: "0 14px 10px",
-            fontSize: "var(--label-size)",
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            color: "var(--text-tertiary)",
-          }}
-        >
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: tagColors.dot,
-              flexShrink: 0,
-            }}
-          />
-          <span>{idea.color}</span>
-        </div>
-      )}
 
       {/* Plop ripple — square for grid aesthetic */}
       {entering && (

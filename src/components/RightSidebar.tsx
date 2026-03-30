@@ -1,8 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useStore } from "../store/useStore";
-import { TAG_COLORS, TagColor } from "../types";
-
-const TAG_COLOR_KEYS = Object.keys(TAG_COLORS) as TagColor[];
 
 function formatTimestamp(iso: string): string {
   const d = new Date(iso);
@@ -45,24 +42,26 @@ export function RightSidebar() {
   const deleteIdea = useStore((s) => s.deleteIdea);
   const setSelectedId = useStore((s) => s.setSelectedId);
   const setDeletingNodeId = useStore((s) => s.setDeletingNodeId);
+  const addTag = useStore((s) => s.addTag);
+  const removeTag = useStore((s) => s.removeTag);
 
   const canvas = canvases.find((c) => c.id === activeCanvasId);
   const idea = canvas?.ideas.find((i) => i.id === selectedId);
+  const tags = canvas?.tags || [];
 
-  const [editing, setEditing] = useState(false);
   const [titleValue, setTitleValue] = useState("");
   const [descValue, setDescValue] = useState("");
-  const [colorValue, setColorValue] = useState<TagColor | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#6b9bff");
   const confirmTimer = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
     if (idea) {
       setTitleValue(idea.text);
       setDescValue(idea.description);
-      setColorValue(idea.color);
-      setEditing(false);
       setDeleteConfirm(false);
       setClosing(false);
     }
@@ -79,11 +78,9 @@ export function RightSidebar() {
       updateIdea(selectedId, {
         text: titleValue.trim(),
         description: descValue,
-        color: colorValue,
       });
     }
-    setEditing(false);
-  }, [selectedId, titleValue, descValue, colorValue, updateIdea]);
+  }, [selectedId, titleValue, descValue, updateIdea]);
 
   const handleDeleteConfirm = useCallback(() => {
     if (selectedId) {
@@ -145,313 +142,335 @@ export function RightSidebar() {
         NODE DETAILS
       </div>
 
-      {!editing ? (
-        <>
-          {/* Title section */}
-          <div style={sectionStyle}>
-            <div style={labelStyle}>TITLE</div>
-            <div style={{ ...valueStyle, fontWeight: 500 }}>{idea.text}</div>
-          </div>
+      {/* Title section */}
+      <div style={sectionStyle}>
+        <div style={labelStyle}>TITLE</div>
+        <input
+          autoFocus
+          value={titleValue}
+          onChange={(e) => setTitleValue(e.target.value)}
+          style={{
+            width: "100%",
+            fontSize: "var(--body-size)",
+            fontWeight: 400,
+            fontFamily: "var(--font-mono)",
+            background: "transparent",
+            border: "1px solid var(--border-default)",
+            borderRadius: 0,
+            color: "var(--text-primary)",
+            padding: "8px 10px",
+            transition: "border-color 0.15s ease",
+            boxSizing: "border-box",
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--border-focus)"; }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--border-default)";
+            handleSave();
+          }}
+        />
+      </div>
 
-          {/* Created section */}
-          <div style={sectionStyle}>
-            <div style={labelStyle}>CREATED</div>
-            <div style={{ ...valueStyle, color: "var(--text-secondary)" }}>
-              {formatTimestamp(idea.createdAt)}
-            </div>
-          </div>
+      {/* Created section */}
+      <div style={sectionStyle}>
+        <div style={labelStyle}>CREATED</div>
+        <div style={{ ...valueStyle, color: "var(--text-secondary)" }}>
+          {formatTimestamp(idea.createdAt)}
+        </div>
+      </div>
 
-          {/* Description section */}
-          <div style={sectionStyle}>
-            <div style={labelStyle}>DESCRIPTION</div>
-            <div style={{ ...valueStyle, color: idea.description ? "var(--text-primary)" : "var(--text-tertiary)" }}>
-              {idea.description || "No description"}
-            </div>
-          </div>
+      {/* Description section */}
+      <div style={sectionStyle}>
+        <div style={labelStyle}>DESCRIPTION</div>
+        <textarea
+          value={descValue}
+          onChange={(e) => setDescValue(e.target.value)}
+          placeholder="add a description..."
+          style={{
+            width: "100%",
+            minHeight: 100,
+            background: "transparent",
+            border: "1px solid var(--border-default)",
+            borderRadius: 0,
+            color: "var(--text-primary)",
+            fontSize: "var(--body-size)",
+            fontFamily: "var(--font-mono)",
+            padding: "8px 10px",
+            resize: "vertical",
+            lineHeight: 1.6,
+            transition: "border-color 0.15s ease",
+            boxSizing: "border-box",
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--border-focus)"; }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = "var(--border-default)";
+            handleSave();
+          }}
+        />
+      </div>
 
-          {/* Tag section */}
-          <div style={sectionStyle}>
-            <div style={labelStyle}>TAG</div>
-            {idea.color ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div
-                  style={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: "50%",
-                    background: TAG_COLORS[idea.color].dot,
-                  }}
-                />
-                <span style={{ ...valueStyle, textTransform: "uppercase", letterSpacing: "0.08em", fontSize: "var(--label-size)" }}>
-                  {idea.color}
-                </span>
-              </div>
-            ) : (
-              <div style={{ ...valueStyle, color: "var(--text-tertiary)" }}>None</div>
-            )}
-          </div>
-
-          {/* Action buttons */}
-          <div style={{ marginTop: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <button
-              onClick={() => setEditing(true)}
-              style={{
-                width: "100%",
-                padding: 10,
-                background: "transparent",
-                border: "1px solid var(--accent-blue)",
-                borderRadius: 0,
-                color: "var(--accent-blue)",
-                fontSize: "var(--body-size)",
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                justifyContent: "center",
-                transition: "background 0.15s ease",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(68, 136, 255, 0.08)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-            >
-              EDIT
-            </button>
-
-            {!deleteConfirm ? (
-              <button
-                onClick={handleDeleteStart}
-                style={{
-                  width: "100%",
-                  padding: 10,
-                  background: "transparent",
-                  border: "1px solid var(--accent-red)",
-                  borderRadius: 0,
-                  color: "var(--accent-red)",
-                  fontSize: "var(--body-size)",
-                  fontFamily: "var(--font-mono)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  justifyContent: "center",
-                  transition: "background 0.15s ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 68, 68, 0.08)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-              >
-                DELETE
-              </button>
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  padding: 10,
-                  border: "1px solid var(--accent-red)",
-                  borderRadius: 0,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 12,
-                  fontSize: "var(--body-size)",
-                  fontFamily: "var(--font-mono)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  color: "var(--accent-red)",
-                }}
-              >
-                <span>CONFIRM?</span>
-                <button
-                  onClick={handleDeleteConfirm}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid var(--accent-red)",
-                    borderRadius: 0,
-                    color: "var(--accent-red)",
-                    fontSize: "var(--body-size)",
-                    fontFamily: "var(--font-mono)",
-                    cursor: "pointer",
-                    padding: "2px 8px",
-                    letterSpacing: "0.05em",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 68, 68, 0.12)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  Y
-                </button>
-                <button
-                  onClick={handleDeleteCancel}
-                  style={{
-                    background: "transparent",
-                    border: "1px solid var(--text-tertiary)",
-                    borderRadius: 0,
-                    color: "var(--text-tertiary)",
-                    fontSize: "var(--body-size)",
-                    fontFamily: "var(--font-mono)",
-                    cursor: "pointer",
-                    padding: "2px 8px",
-                    letterSpacing: "0.05em",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(85, 85, 85, 0.12)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  N
-                </button>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        /* Edit mode */
-        <>
-          <div style={sectionStyle}>
-            <div style={labelStyle}>TITLE</div>
-            <input
-              autoFocus
-              value={titleValue}
-              onChange={(e) => setTitleValue(e.target.value)}
-              style={{
-                width: "100%",
-                fontSize: "var(--body-size)",
-                fontWeight: 400,
-                fontFamily: "var(--font-mono)",
-                background: "transparent",
-                border: "1px solid var(--border-default)",
-                borderRadius: 0,
-                color: "var(--text-primary)",
-                padding: "8px 10px",
-                transition: "border-color 0.15s ease",
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--border-focus)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
-            />
-          </div>
-
-          <div style={sectionStyle}>
-            <div style={labelStyle}>DESCRIPTION</div>
-            <textarea
-              value={descValue}
-              onChange={(e) => setDescValue(e.target.value)}
-              placeholder="add a description..."
-              style={{
-                width: "100%",
-                minHeight: 100,
-                background: "transparent",
-                border: "1px solid var(--border-default)",
-                borderRadius: 0,
-                color: "var(--text-primary)",
-                fontSize: "var(--body-size)",
-                fontFamily: "var(--font-mono)",
-                padding: "8px 10px",
-                resize: "vertical",
-                lineHeight: 1.6,
-                transition: "border-color 0.15s ease",
-              }}
-              onFocus={(e) => { e.currentTarget.style.borderColor = "var(--border-focus)"; }}
-              onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-default)"; }}
-            />
-          </div>
-
-          <div style={sectionStyle}>
-            <div style={labelStyle}>COLOR TAG</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {TAG_COLOR_KEYS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColorValue(colorValue === c ? undefined : c)}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 0,
-                    background: colorValue === c ? TAG_COLORS[c].dot : "transparent",
-                    border: `1px solid ${colorValue === c ? TAG_COLORS[c].dot : "var(--border-default)"}`,
-                    cursor: "pointer",
-                    transition: "border-color 0.15s ease, background 0.15s ease",
-                    padding: 0,
-                    position: "relative",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (colorValue !== c) e.currentTarget.style.borderColor = TAG_COLORS[c].dot;
-                  }}
-                  onMouseLeave={(e) => {
-                    if (colorValue !== c) e.currentTarget.style.borderColor = "var(--border-default)";
-                  }}
-                >
-                  {/* Inner dot */}
-                  {colorValue !== c && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: "50%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        background: TAG_COLORS[c].dot,
-                      }}
-                    />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ marginTop: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
-            <button
-              onClick={handleSave}
-              style={{
-                width: "100%",
-                padding: 10,
-                background: "transparent",
-                border: "1px solid var(--accent-blue)",
-                borderRadius: 0,
-                color: "var(--accent-blue)",
-                fontSize: "var(--body-size)",
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                cursor: "pointer",
-                transition: "background 0.15s ease",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(68, 136, 255, 0.08)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-            >
-              SAVE
-            </button>
-            <button
+      {/* Tags section */}
+      <div style={sectionStyle}>
+        <div style={labelStyle}>TAGS</div>
+        {tags.length === 0 && !addingTag && (
+          <div style={{ ...valueStyle, color: "var(--text-tertiary)", marginBottom: 8 }}>No tags</div>
+        )}
+        {tags.map((tag) => {
+          const isActive = idea.color === tag.id;
+          return (
+            <div
+              key={tag.id}
               onClick={() => {
-                setEditing(false);
-                if (idea) {
-                  setTitleValue(idea.text);
-                  setDescValue(idea.description);
-                  setColorValue(idea.color);
+                if (selectedId) {
+                  updateIdea(selectedId, { color: isActive ? undefined : (tag.id as any) });
                 }
               }}
               style={{
-                background: "none",
-                border: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "5px 8px",
+                marginBottom: 4,
+                cursor: "pointer",
+                borderRadius: 0,
+                background: isActive ? "rgba(255,255,255,0.05)" : "transparent",
+                borderLeft: isActive ? `2px solid ${tag.color}` : "2px solid transparent",
+                transition: "background 0.12s ease",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <div
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 2,
+                  background: tag.color,
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ ...valueStyle, flex: 1, fontSize: "var(--label-size)" }}>
+                {tag.name}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTag(tag.id);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--text-tertiary)",
+                  cursor: "pointer",
+                  padding: "0 2px",
+                  fontSize: 12,
+                  lineHeight: 1,
+                  fontFamily: "var(--font-mono)",
+                  transition: "color 0.12s ease",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--accent-red)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; }}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
+
+        {addingTag ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+            <input
+              type="color"
+              value={newTagColor}
+              onChange={(e) => setNewTagColor(e.target.value)}
+              style={{
+                width: 24,
+                height: 24,
+                padding: 0,
+                border: "1px solid var(--border-default)",
+                borderRadius: 0,
+                cursor: "pointer",
+                background: "transparent",
+                flexShrink: 0,
+              }}
+            />
+            <input
+              type="text"
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              placeholder="tag name"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newTagName.trim()) {
+                  addTag(newTagName.trim(), newTagColor);
+                  setNewTagName("");
+                  setNewTagColor("#6b9bff");
+                  setAddingTag(false);
+                } else if (e.key === "Escape") {
+                  setAddingTag(false);
+                  setNewTagName("");
+                  setNewTagColor("#6b9bff");
+                }
+              }}
+              style={{
+                flex: 1,
+                fontSize: "var(--label-size)",
+                fontFamily: "var(--font-mono)",
+                background: "transparent",
+                border: "1px solid var(--border-default)",
+                borderRadius: 0,
+                color: "var(--text-primary)",
+                padding: "4px 6px",
+                minWidth: 0,
+              }}
+            />
+            <button
+              onClick={() => {
+                if (newTagName.trim()) {
+                  addTag(newTagName.trim(), newTagColor);
+                  setNewTagName("");
+                  setNewTagColor("#6b9bff");
+                  setAddingTag(false);
+                }
+              }}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--accent-blue)",
+                borderRadius: 0,
+                color: "var(--accent-blue)",
+                fontSize: "var(--label-size)",
+                fontFamily: "var(--font-mono)",
+                cursor: "pointer",
+                padding: "4px 8px",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                flexShrink: 0,
+              }}
+            >
+              ADD
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingTag(true)}
+            style={{
+              marginTop: tags.length > 0 ? 6 : 0,
+              background: "transparent",
+              border: "1px dashed var(--border-subtle)",
+              borderRadius: 0,
+              color: "var(--text-tertiary)",
+              fontSize: "var(--label-size)",
+              fontFamily: "var(--font-mono)",
+              cursor: "pointer",
+              padding: "4px 10px",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              transition: "border-color 0.12s ease, color 0.12s ease",
+              display: "block",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "var(--border-default)";
+              e.currentTarget.style.color = "var(--text-secondary)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "var(--border-subtle)";
+              e.currentTarget.style.color = "var(--text-tertiary)";
+            }}
+          >
+            + NEW TAG
+          </button>
+        )}
+      </div>
+
+      {/* Action buttons */}
+      <div style={{ marginTop: "auto", padding: "16px 20px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {!deleteConfirm ? (
+          <button
+            onClick={handleDeleteStart}
+            style={{
+              width: "100%",
+              padding: 10,
+              background: "transparent",
+              border: "1px solid var(--accent-red)",
+              borderRadius: 0,
+              color: "var(--accent-red)",
+              fontSize: "var(--body-size)",
+              fontFamily: "var(--font-mono)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              justifyContent: "center",
+              transition: "background 0.15s ease",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 68, 68, 0.08)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          >
+            DELETE
+          </button>
+        ) : (
+          <div
+            style={{
+              width: "100%",
+              padding: 10,
+              border: "1px solid var(--accent-red)",
+              borderRadius: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 12,
+              fontSize: "var(--body-size)",
+              fontFamily: "var(--font-mono)",
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              color: "var(--accent-red)",
+            }}
+          >
+            <span>CONFIRM?</span>
+            <button
+              onClick={handleDeleteConfirm}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--accent-red)",
+                borderRadius: 0,
+                color: "var(--accent-red)",
+                fontSize: "var(--body-size)",
+                fontFamily: "var(--font-mono)",
+                cursor: "pointer",
+                padding: "2px 8px",
+                letterSpacing: "0.05em",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255, 68, 68, 0.12)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+            >
+              Y
+            </button>
+            <button
+              onClick={handleDeleteCancel}
+              style={{
+                background: "transparent",
+                border: "1px solid var(--text-tertiary)",
+                borderRadius: 0,
                 color: "var(--text-tertiary)",
                 fontSize: "var(--body-size)",
                 fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
                 cursor: "pointer",
-                padding: 8,
-                textAlign: "center",
-                transition: "color 0.15s ease",
+                padding: "2px 8px",
+                letterSpacing: "0.05em",
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-tertiary)"; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(85, 85, 85, 0.12)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
-              CANCEL
+              N
             </button>
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

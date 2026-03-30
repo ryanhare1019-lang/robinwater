@@ -9,6 +9,12 @@ export const TAG_COLORS = {
 
 export type TagColor = keyof typeof TAG_COLORS;
 
+export interface CustomTag {
+  id: string;
+  name: string;
+  color: string; // hex color string like "#ff6b6b"
+}
+
 export interface Idea {
   id: string;
   text: string;
@@ -40,6 +46,7 @@ export interface Canvas {
   ideas: Idea[];
   connections: Connection[];
   viewport: Viewport;
+  tags?: CustomTag[];
 }
 
 // New multi-canvas save format

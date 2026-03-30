@@ -33,7 +33,7 @@ export function Background() {
           height="24"
           patternUnits="userSpaceOnUse"
         >
-          <circle cx="12" cy="12" r="0.5" fill="var(--text-muted)" opacity="0.3" />
+          <circle cx="12" cy="12" r="1.2" fill="white" opacity="0.55" />
         </pattern>
 
         {/* Radial gradient for light pools */}

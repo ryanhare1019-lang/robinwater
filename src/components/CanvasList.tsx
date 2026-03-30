@@ -135,7 +135,7 @@ export function CanvasList() {
           width: 28,
           height: 28,
           cursor: "pointer",
-          display: "flex",
+          display: leftSidebarOpen ? "none" : "flex",
           alignItems: "center",
           justifyContent: "center",
           textTransform: "uppercase",

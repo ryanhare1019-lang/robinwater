@@ -7,6 +7,7 @@ export function InputBox() {
   const selectedId = useStore((s) => s.selectedId);
   const [pulsing, setPulsing] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [value, setValue] = useState("");
 
   const focus = useCallback(() => {
     inputRef.current?.focus();
@@ -22,6 +23,24 @@ export function InputBox() {
         useStore.getState().setContextMenu(null, null);
         useStore.getState().setLeftSidebarOpen(false);
         focus();
+      } else if (
+        e.key.length === 1 &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        const active = document.activeElement;
+        const isEditable =
+          active instanceof HTMLInputElement ||
+          active instanceof HTMLTextAreaElement ||
+          (active instanceof HTMLElement && active.isContentEditable);
+        if (!isEditable) {
+          focus();
+          if (inputRef.current) {
+            inputRef.current.value = e.key;
+            setValue(e.key);
+          }
+        }
       }
     };
 
@@ -45,6 +64,7 @@ export function InputBox() {
         if (text) {
           addIdea(text);
           (e.target as HTMLInputElement).value = "";
+          setValue("");
           setPulsing(true);
           setTimeout(() => setPulsing(false), 200);
         }
@@ -54,6 +74,7 @@ export function InputBox() {
   );
 
   const rightOffset = selectedId ? 320 + 24 : 24;
+  const inputWidth = Math.max(260, value.length * 9 + 40);
 
   return (
     <div
@@ -93,18 +114,20 @@ export function InputBox() {
         <input
           ref={inputRef}
           type="text"
-          placeholder="plop an idea..."
+          placeholder="add an idea..."
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          onChange={(e) => setValue(e.target.value)}
           style={{
-            width: 260,
+            width: inputWidth,
             padding: "8px 12px 8px 8px",
             background: "transparent",
             border: "none",
             color: "var(--text-primary)",
             fontSize: "var(--body-size)",
             fontFamily: "var(--font-mono)",
+            transition: "width 0.1s ease",
           }}
         />
       </div>
