@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { Idea, Viewport, AppData, Canvas, Connection, TagColor, CustomTag } from "../types";
 import { extractKeywords } from "../utils/keywords";
-import { findPlacement } from "../utils/placement";
+import { findPlacement, overlapsAny } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
 
 function generateId(): string {
@@ -127,11 +127,23 @@ export const useStore = create<AppState>((set, get) => {
       let x: number;
       let y: number;
       if (parent) {
-        // Spawn in a random direction, 120–250px away from parent
+        // Spawn at least 280px away so we clear the parent node's bounding box (~200×80)
+        // then spiral-search if still overlapping another idea
         const angle = Math.random() * Math.PI * 2;
-        const dist = 120 + Math.random() * 130;
-        x = Math.round(parent.x + Math.cos(angle) * dist);
-        y = Math.round(parent.y + Math.sin(angle) * dist);
+        const dist = 280 + Math.random() * 120;
+        x = parent.x + Math.cos(angle) * dist;
+        y = parent.y + Math.sin(angle) * dist;
+        if (overlapsAny(x, y, canvas.ideas)) {
+          const goldenAngle = 2.399963;
+          for (let i = 1; i <= 40; i++) {
+            const cx = parent.x + Math.cos(angle + i * goldenAngle) * (dist + i * 40);
+            const cy = parent.y + Math.sin(angle + i * goldenAngle) * (dist + i * 40);
+            if (!overlapsAny(cx, cy, canvas.ideas)) { x = cx; y = cy; break; }
+            if (i === 40) { x = cx; y = cy; }
+          }
+        }
+        x = Math.round(x);
+        y = Math.round(y);
       } else {
         const vw = window.innerWidth;
         const vh = window.innerHeight;

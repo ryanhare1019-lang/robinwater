@@ -150,24 +150,24 @@ export function Canvas() {
         if (inInput) return;
         if (selectedId) {
           e.preventDefault();
-          setDeleteConfirmPending(true);
-          if (deleteConfirmTimer.current) clearTimeout(deleteConfirmTimer.current);
-          deleteConfirmTimer.current = setTimeout(() => {
-            setDeleteConfirmPending(false);
-            deleteConfirmTimer.current = null;
-          }, 4000);
+          if (deleteConfirmPending) {
+            // Second Delete press confirms deletion
+            cancelDeleteConfirm();
+            setDeletingNodeId(selectedId);
+            const idToDelete = selectedId;
+            setTimeout(() => {
+              deleteIdea(idToDelete);
+              setSelectedId(null);
+            }, 250);
+          } else {
+            setDeleteConfirmPending(true);
+            if (deleteConfirmTimer.current) clearTimeout(deleteConfirmTimer.current);
+            deleteConfirmTimer.current = setTimeout(() => {
+              setDeleteConfirmPending(false);
+              deleteConfirmTimer.current = null;
+            }, 4000);
+          }
         }
-      }
-
-      if (e.key === "Enter" && deleteConfirmPending && selectedId) {
-        e.preventDefault();
-        cancelDeleteConfirm();
-        setDeletingNodeId(selectedId);
-        const idToDelete = selectedId;
-        setTimeout(() => {
-          deleteIdea(idToDelete);
-          setSelectedId(null);
-        }, 250);
       }
 
       if (e.key === "Escape" && deleteConfirmPending) {
@@ -254,7 +254,7 @@ export function Canvas() {
             whiteSpace: "nowrap",
           }}
         >
-          DELETE?&nbsp;&nbsp;[ENTER] confirm&nbsp;&nbsp;[ESC] cancel
+          DELETE?&nbsp;&nbsp;[DELETE] confirm&nbsp;&nbsp;[ESC] cancel
         </div>
       )}
     </>

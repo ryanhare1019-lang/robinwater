@@ -5,7 +5,7 @@ const NODE_WIDTH = 240;
 const NODE_HEIGHT = 60;
 const PADDING = 20;
 
-function overlapsAny(cx: number, cy: number, ideas: Idea[]): boolean {
+export function overlapsAny(cx: number, cy: number, ideas: Idea[]): boolean {
   for (const idea of ideas) {
     const iw = (idea.width || NODE_WIDTH) + PADDING;
     const ih = (idea.height || NODE_HEIGHT) + PADDING;

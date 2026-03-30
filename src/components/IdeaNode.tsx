@@ -123,11 +123,11 @@ export function IdeaNode({ idea }: Props) {
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      // Suppress context menu while in connect mode
-      if (connectingFrom !== null) return;
+      // Read from store directly to avoid stale closure (connectingFrom may have just been set)
+      if (useStore.getState().connectingFrom !== null) return;
       setContextMenu(idea.id, { x: e.clientX, y: e.clientY });
     },
-    [idea.id, setContextMenu, connectingFrom]
+    [idea.id, setContextMenu]
   );
 
   // Resize handle
