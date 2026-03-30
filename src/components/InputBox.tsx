@@ -4,6 +4,7 @@ import { useStore } from "../store/useStore";
 export function InputBox() {
   const inputRef = useRef<HTMLInputElement>(null);
   const addIdea = useStore((s) => s.addIdea);
+  const addConnectedIdea = useStore((s) => s.addConnectedIdea);
   const selectedId = useStore((s) => s.selectedId);
   const [pulsing, setPulsing] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -62,7 +63,11 @@ export function InputBox() {
       if (e.key === "Enter") {
         const text = (e.target as HTMLInputElement).value.trim();
         if (text) {
-          addIdea(text);
+          if (selectedId) {
+            addConnectedIdea(text, selectedId);
+          } else {
+            addIdea(text);
+          }
           (e.target as HTMLInputElement).value = "";
           setValue("");
           setPulsing(true);
@@ -70,7 +75,7 @@ export function InputBox() {
         }
       }
     },
-    [addIdea]
+    [addIdea, addConnectedIdea, selectedId]
   );
 
   const rightOffset = selectedId ? 320 + 24 : 24;
@@ -114,7 +119,7 @@ export function InputBox() {
         <input
           ref={inputRef}
           type="text"
-          placeholder="add an idea..."
+          placeholder={selectedId ? "connect an idea..." : "add an idea..."}
           onKeyDown={handleKeyDown}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}

@@ -36,6 +36,7 @@ interface AppState {
 
   // Actions
   addIdea: (text: string) => void;
+  addConnectedIdea: (text: string, parentId: string) => void;
   updateIdea: (id: string, updates: Partial<Pick<Idea, "text" | "description" | "x" | "y" | "width" | "height" | "color">>) => void;
   deleteIdea: (id: string) => void;
   setViewport: (viewport: Partial<Viewport>) => void;
@@ -111,6 +112,50 @@ export const useStore = create<AppState>((set, get) => {
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
           ...c, ideas,
+        })),
+        newNodeId: idea.id,
+        similarityLines: computeSimilarityLines(ideas),
+      });
+    },
+
+    addConnectedIdea: (text, parentId) => {
+      const state = get();
+      const canvas = getActiveCanvas(state);
+      const parent = canvas.ideas.find((i) => i.id === parentId);
+      const keywords = extractKeywords(text);
+
+      let x: number;
+      let y: number;
+      if (parent) {
+        // Spawn in a random direction, 120–250px away from parent
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 120 + Math.random() * 130;
+        x = Math.round(parent.x + Math.cos(angle) * dist);
+        y = Math.round(parent.y + Math.sin(angle) * dist);
+      } else {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const vp = canvas.viewport;
+        x = Math.round(-vp.x / vp.zoom + (Math.random() * vw * 0.5 + vw * 0.15) / vp.zoom);
+        y = Math.round(-vp.y / vp.zoom + (Math.random() * vh * 0.5 + vh * 0.15) / vp.zoom);
+      }
+
+      const idea: Idea = {
+        id: generateId(),
+        text,
+        description: "",
+        x,
+        y,
+        createdAt: new Date().toISOString(),
+        keywords,
+      };
+      const conn: Connection = { id: generateId(), sourceId: parentId, targetId: idea.id };
+      const ideas = [...canvas.ideas, idea];
+      const connections = [...canvas.connections, conn];
+
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c, ideas, connections,
         })),
         newNodeId: idea.id,
         similarityLines: computeSimilarityLines(ideas),

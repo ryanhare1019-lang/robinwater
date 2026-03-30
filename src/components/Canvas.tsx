@@ -90,11 +90,22 @@ export function Canvas() {
       setViewport({ x: viewportRef.current.x, y: viewportRef.current.y });
     };
 
+    const onRightUp = (e: MouseEvent) => {
+      if (e.button === 2) {
+        const state = useStore.getState();
+        if (state.connectingFrom) {
+          state.setConnectingFrom(null);
+        }
+      }
+    };
+
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
+    window.addEventListener("mouseup", onRightUp);
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("mouseup", onRightUp);
     };
   }, [setViewport, applyTransform]);
 
@@ -168,13 +179,26 @@ export function Canvas() {
         e.preventDefault();
         setViewport({ x: 0, y: 0, zoom: 1 });
       }
+
+      if ((e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowUp") && !inInput) {
+        if (ideas.length === 0) return;
+        e.preventDefault();
+        const currentIndex = ideas.findIndex((i) => i.id === selectedId);
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % ideas.length;
+          setSelectedId(ideas[nextIndex].id);
+        } else {
+          const prevIndex = currentIndex === -1 ? ideas.length - 1 : (currentIndex - 1 + ideas.length) % ideas.length;
+          setSelectedId(ideas[prevIndex].id);
+        }
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
       if (deleteConfirmTimer.current) clearTimeout(deleteConfirmTimer.current);
     };
-  }, [selectedId, deleteConfirmPending, setViewport, deleteIdea, setDeletingNodeId, setSelectedId, cancelDeleteConfirm]);
+  }, [selectedId, deleteConfirmPending, setViewport, deleteIdea, setDeletingNodeId, setSelectedId, cancelDeleteConfirm, ideas]);
 
   return (
     <>

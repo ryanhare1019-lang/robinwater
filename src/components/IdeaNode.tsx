@@ -97,6 +97,18 @@ export function IdeaNode({ idea }: Props) {
     [idea.id, idea.x, idea.y, updateIdea, connectingFrom, addConnection, setConnectingFrom]
   );
 
+  const onMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 2) return;
+      e.stopPropagation();
+      e.preventDefault();
+      if (connectingFrom && connectingFrom !== idea.id) {
+        addConnection(connectingFrom, idea.id);
+      }
+    },
+    [connectingFrom, idea.id, addConnection]
+  );
+
   const onClick = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -181,12 +193,15 @@ export function IdeaNode({ idea }: Props) {
     ? "var(--border-strong)"
     : "var(--border-default)";
 
+  const hasTag = Boolean(idea.color && TAG_COLORS[idea.color as keyof typeof TAG_COLORS]);
+
   const hasDescription = Boolean(idea.description && idea.description.trim().length > 0);
 
   return (
     <div
       ref={nodeRef}
       onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={() => { if (!entering && !isDragging && !isDeleting) setIsHovered(true); }}
@@ -202,6 +217,8 @@ export function IdeaNode({ idea }: Props) {
         background: "var(--bg-surface)",
         border: `1px solid ${borderColor}`,
         borderLeft: isSelected
+          ? `3px solid var(--text-secondary)`
+          : hasTag
           ? `3px solid ${tagBorderColor}`
           : `1px solid ${borderColor}`,
         borderRadius: 0,

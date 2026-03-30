@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useStore } from "../store/useStore";
 
 function getCurveControlPoints(
@@ -31,8 +30,6 @@ export function ConnectionLines() {
   const ideas = canvas?.ideas || [];
   const connections = canvas?.connections || [];
 
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
-
   const ideasById = new Map(ideas.map((i) => [i.id, i]));
 
   if (connections.length === 0) return null;
@@ -61,9 +58,6 @@ export function ConnectionLines() {
 
         const { cpx1, cpy1 } = getCurveControlPoints(x1, y1, x2, y2);
         const d = `M ${x1} ${y1} Q ${cpx1} ${cpy1} ${x2} ${y2}`;
-        const isHovered = hoveredId === conn.id;
-        const mx = (x1 + x2) / 2 + (cpx1 - (x1 + x2) / 2) * 0.5;
-        const my = (y1 + y2) / 2 + (cpy1 - (y1 + y2) / 2) * 0.5;
 
         return (
           <g key={conn.id}>
@@ -74,8 +68,7 @@ export function ConnectionLines() {
               stroke="transparent"
               strokeWidth={12}
               style={{ pointerEvents: "stroke", cursor: "pointer" }}
-              onMouseEnter={() => setHoveredId(conn.id)}
-              onMouseLeave={() => setHoveredId(null)}
+              onClick={() => removeConnection(conn.id)}
             />
             {/* Visible line */}
             <path
@@ -83,39 +76,9 @@ export function ConnectionLines() {
               fill="none"
               stroke="var(--text-primary)"
               strokeWidth={1}
-              opacity={isHovered ? 0.85 : 0.45}
-              style={{ transition: "opacity 0.15s ease", pointerEvents: "none" }}
+              opacity={0.45}
+              style={{ pointerEvents: "none" }}
             />
-            {/* Delete button on hover */}
-            {isHovered && (
-              <g
-                onClick={() => removeConnection(conn.id)}
-                style={{ cursor: "pointer", pointerEvents: "all" }}
-                onMouseEnter={() => setHoveredId(conn.id)}
-              >
-                <rect
-                  x={mx - 8}
-                  y={my - 8}
-                  width={16}
-                  height={16}
-                  fill="var(--bg-raised)"
-                  stroke="var(--accent-red)"
-                  strokeWidth={1}
-                  opacity={0.9}
-                />
-                <text
-                  x={mx}
-                  y={my + 1}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill="var(--accent-red)"
-                  fontSize={10}
-                  fontFamily="var(--font-mono)"
-                >
-                  x
-                </text>
-              </g>
-            )}
           </g>
         );
       })}

@@ -58,6 +58,15 @@ export function RightSidebar() {
   const [newTagColor, setNewTagColor] = useState("#6b9bff");
   const confirmTimer = useRef<ReturnType<typeof setTimeout>>();
 
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const descRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoGrow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  };
+
   useEffect(() => {
     if (idea) {
       setTitleValue(idea.text);
@@ -66,6 +75,11 @@ export function RightSidebar() {
       setClosing(false);
     }
   }, [idea?.id]);
+
+  useEffect(() => {
+    autoGrow(titleRef.current);
+    autoGrow(descRef.current);
+  }, [idea?.id, titleValue, descValue]);
 
   useEffect(() => {
     return () => {
@@ -145,10 +159,18 @@ export function RightSidebar() {
       {/* Title section */}
       <div style={sectionStyle}>
         <div style={labelStyle}>TITLE</div>
-        <input
-          autoFocus
+        <textarea
+          ref={titleRef}
           value={titleValue}
-          onChange={(e) => setTitleValue(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setTitleValue(val);
+            autoGrow(titleRef.current);
+            if (selectedId && val.trim()) {
+              updateIdea(selectedId, { text: val.trim(), description: descValue });
+            }
+          }}
+          rows={1}
           style={{
             width: "100%",
             fontSize: "var(--body-size)",
@@ -161,6 +183,10 @@ export function RightSidebar() {
             padding: "8px 10px",
             transition: "border-color 0.15s ease",
             boxSizing: "border-box",
+            resize: "none",
+            overflow: "hidden",
+            lineHeight: 1.5,
+            display: "block",
           }}
           onFocus={(e) => { e.currentTarget.style.borderColor = "var(--border-focus)"; }}
           onBlur={(e) => {
@@ -182,12 +208,19 @@ export function RightSidebar() {
       <div style={sectionStyle}>
         <div style={labelStyle}>DESCRIPTION</div>
         <textarea
+          ref={descRef}
           value={descValue}
-          onChange={(e) => setDescValue(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setDescValue(val);
+            autoGrow(descRef.current);
+            if (selectedId) {
+              updateIdea(selectedId, { text: titleValue.trim() || idea.text, description: val });
+            }
+          }}
           placeholder="add a description..."
           style={{
             width: "100%",
-            minHeight: 100,
             background: "transparent",
             border: "1px solid var(--border-default)",
             borderRadius: 0,
@@ -195,7 +228,8 @@ export function RightSidebar() {
             fontSize: "var(--body-size)",
             fontFamily: "var(--font-mono)",
             padding: "8px 10px",
-            resize: "vertical",
+            resize: "none",
+            overflow: "hidden",
             lineHeight: 1.6,
             transition: "border-color 0.15s ease",
             boxSizing: "border-box",
