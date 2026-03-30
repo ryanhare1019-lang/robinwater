@@ -1,10 +1,12 @@
 import { useRef, useEffect, useCallback, useState } from "react";
-import { Idea, TAG_COLORS } from "../types";
+import { Idea } from "../types";
 import { useStore, getActiveViewport } from "../store/useStore";
 
 interface Props {
   idea: Idea;
 }
+
+const EMPTY_TAGS: import("../types").CustomTag[] = [];
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -25,6 +27,11 @@ export function IdeaNode({ idea }: Props) {
   const setContextMenu = useStore((s) => s.setContextMenu);
   const addConnection = useStore((s) => s.addConnection);
   const setConnectingFrom = useStore((s) => s.setConnectingFrom);
+
+  const canvasTags = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.tags || EMPTY_TAGS;
+  });
 
   const isSelected = selectedId === idea.id;
   const isNew = newNodeId === idea.id;
@@ -174,14 +181,6 @@ export function IdeaNode({ idea }: Props) {
     ? idea.text.slice(0, 120) + "\u2026"
     : idea.text;
 
-  const tagColors = idea.color ? TAG_COLORS[idea.color as keyof typeof TAG_COLORS] : null;
-
-  // Tag border color for selected left border
-  const tagBorderColor =
-    idea.color && TAG_COLORS[idea.color as keyof typeof TAG_COLORS]
-      ? TAG_COLORS[idea.color as keyof typeof TAG_COLORS].dot
-      : "var(--text-secondary)";
-
   // Border logic
   const borderColor = entering
     ? "var(--border-strong)"
@@ -193,7 +192,9 @@ export function IdeaNode({ idea }: Props) {
     ? "var(--border-strong)"
     : "var(--border-default)";
 
-  const hasTag = Boolean(idea.color && TAG_COLORS[idea.color as keyof typeof TAG_COLORS]);
+  const ideaTags = (idea.tags || [])
+    .map((id) => canvasTags.find((t) => t.id === id))
+    .filter((t): t is NonNullable<typeof t> => t !== undefined);
 
   const hasDescription = Boolean(idea.description && idea.description.trim().length > 0);
 
@@ -218,8 +219,6 @@ export function IdeaNode({ idea }: Props) {
         border: `1px solid ${borderColor}`,
         borderLeft: isSelected
           ? `3px solid var(--text-secondary)`
-          : hasTag
-          ? `3px solid ${tagBorderColor}`
           : `1px solid ${borderColor}`,
         borderRadius: 0,
         color: "var(--text-primary)",
@@ -249,6 +248,33 @@ export function IdeaNode({ idea }: Props) {
         zIndex: isDragging ? 100 : isSelected ? 10 : 1,
       }}
     >
+      {/* Tag color bar — splits vertically per tag */}
+      {ideaTags.length > 0 && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 4,
+            display: "flex",
+            flexDirection: "column",
+            pointerEvents: "none",
+            zIndex: 1,
+          }}
+        >
+          {ideaTags.map((tag) => (
+            <div
+              key={tag.id}
+              style={{
+                flex: 1,
+                background: tag.color,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Label row: IDEA + description indicator + date */}
       <div
         style={{

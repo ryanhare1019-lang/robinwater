@@ -249,13 +249,17 @@ export function RightSidebar() {
           <div style={{ ...valueStyle, color: "var(--text-tertiary)", marginBottom: 8 }}>No tags</div>
         )}
         {tags.map((tag) => {
-          const isActive = idea.color === tag.id;
+          const isActive = idea.tags?.includes(tag.id) ?? false;
           return (
             <div
               key={tag.id}
               onClick={() => {
                 if (selectedId) {
-                  updateIdea(selectedId, { color: isActive ? undefined : (tag.id as any) });
+                  updateIdea(selectedId, {
+                    tags: isActive
+                      ? (idea.tags || []).filter((id) => id !== tag.id)
+                      : [...(idea.tags || []), tag.id],
+                  });
                 }
               }}
               style={{

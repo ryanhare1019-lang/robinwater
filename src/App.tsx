@@ -42,11 +42,18 @@ async function loadData(): Promise<AppData | null> {
         return migrateV1(parsed as LegacyAppData);
       }
 
-      // Ensure connections array exists on all canvases
+      // Ensure connections array exists on all canvases + migrate color→tags
       const data = parsed as AppData;
       data.canvases = data.canvases.map((c) => ({
         ...c,
         connections: c.connections || [],
+        ideas: c.ideas.map((idea: any) => {
+          if (idea.color !== undefined && !idea.tags) {
+            const { color, ...rest } = idea;
+            return { ...rest, tags: [color] };
+          }
+          return idea;
+        }),
       }));
       return data;
     }

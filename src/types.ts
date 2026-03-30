@@ -25,7 +25,7 @@ export interface Idea {
   height?: number;
   createdAt: string;
   keywords: string[];
-  color?: TagColor;
+  tags?: string[]; // array of CustomTag IDs
 }
 
 export interface Connection {

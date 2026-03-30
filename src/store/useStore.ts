@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, TagColor, CustomTag } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, CustomTag } from "../types";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
@@ -37,7 +37,7 @@ interface AppState {
   // Actions
   addIdea: (text: string) => void;
   addConnectedIdea: (text: string, parentId: string) => void;
-  updateIdea: (id: string, updates: Partial<Pick<Idea, "text" | "description" | "x" | "y" | "width" | "height" | "color">>) => void;
+  updateIdea: (id: string, updates: Partial<Pick<Idea, "text" | "description" | "x" | "y" | "width" | "height" | "tags">>) => void;
   deleteIdea: (id: string) => void;
   setViewport: (viewport: Partial<Viewport>) => void;
   setSelectedId: (id: string | null) => void;
@@ -339,12 +339,14 @@ export const useStore = create<AppState>((set, get) => {
 
     removeTag: (id) => {
       const state = get();
-      // Also remove from any ideas that use this tag
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
           ...c,
           tags: (c.tags || []).filter((t) => t.id !== id),
-          ideas: c.ideas.map((idea) => idea.color === id ? { ...idea, color: undefined } : idea),
+          ideas: c.ideas.map((idea) => ({
+            ...idea,
+            tags: idea.tags?.filter((tagId) => tagId !== id),
+          })),
         })),
       });
     },
