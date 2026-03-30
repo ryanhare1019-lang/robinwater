@@ -23,8 +23,8 @@ export function SimilarityLines() {
         position: "absolute",
         top: 0,
         left: 0,
-        width: "100%",
-        height: "100%",
+        width: 20000,
+        height: 20000,
         pointerEvents: "none",
         overflow: "visible",
       }}

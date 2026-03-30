@@ -43,8 +43,8 @@ export function ConnectionLines() {
         position: "absolute",
         top: 0,
         left: 0,
-        width: "100%",
-        height: "100%",
+        width: 20000,
+        height: 20000,
         pointerEvents: "none",
         overflow: "visible",
       }}
@@ -83,7 +83,7 @@ export function ConnectionLines() {
               fill="none"
               stroke="var(--text-primary)"
               strokeWidth={1}
-              opacity={isHovered ? 0.3 : 0.12}
+              opacity={isHovered ? 0.85 : 0.45}
               style={{ transition: "opacity 0.15s ease", pointerEvents: "none" }}
             />
             {/* Delete button on hover */}

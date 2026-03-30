@@ -16,10 +16,10 @@ export function Background() {
     <svg
       style={{
         position: "absolute",
-        top: -2000,
-        left: -2000,
-        width: 4000,
-        height: 4000,
+        top: -50000,
+        left: -50000,
+        width: 100000,
+        height: 100000,
         pointerEvents: "none",
       }}
     >
@@ -33,7 +33,7 @@ export function Background() {
           height="24"
           patternUnits="userSpaceOnUse"
         >
-          <circle cx="12" cy="12" r="1.2" fill="white" opacity="0.55" />
+          <circle cx="12" cy="12" r="1.2" fill="white" opacity="0.2" />
         </pattern>
 
         {/* Radial gradient for light pools */}
@@ -46,7 +46,7 @@ export function Background() {
       </defs>
 
       {/* Layer 1: Dot grid */}
-      <rect x="0" y="0" width="4000" height="4000" fill="url(#dot-grid)" />
+      <rect x="0" y="0" width="100000" height="100000" fill="url(#dot-grid)" />
 
       {/* Layer 2: Subtle light pools */}
       {lightPools.map((pool, i) => (
