@@ -34,16 +34,23 @@ export function Canvas() {
   const [deleteConfirmPending, setDeleteConfirmPending] = useState(false);
   const deleteConfirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep ref in sync when store changes (e.g. Ctrl+0 reset)
-  useEffect(() => {
-    viewportRef.current = viewport;
-  }, [viewport]);
-
   const applyTransform = useCallback((x: number, y: number, zoom: number) => {
     if (transformRef.current) {
       transformRef.current.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
+      // Scale font sizes up when zoomed out so text stays legible on screen.
+      // Full 1/zoom compensation, capped at 3× to avoid runaway sizes at extreme zoom-out.
+      const scale = zoom < 1 ? Math.min(1 / zoom, 3) : 1;
+      transformRef.current.style.setProperty("--body-size", `${Math.round(13 * scale)}px`);
+      transformRef.current.style.setProperty("--label-size", `${Math.round(10 * scale)}px`);
+      transformRef.current.style.setProperty("--heading-size", `${Math.round(14 * scale)}px`);
     }
   }, []);
+
+  // Keep ref in sync when store changes (e.g. Ctrl+0 reset) and reapply font scaling
+  useEffect(() => {
+    viewportRef.current = viewport;
+    applyTransform(viewport.x, viewport.y, viewport.zoom);
+  }, [viewport, applyTransform]);
 
   const [isPanning, setIsPanning] = useState(false);
   const panning = useRef(false);
