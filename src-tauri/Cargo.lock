@@ -3000,7 +3000,7 @@ dependencies = [
 
 [[package]]
 name = "robinwater"
-version = "1.0.1"
+version = "2.1.0"
 dependencies = [
  "reqwest 0.12.28",
  "serde",
