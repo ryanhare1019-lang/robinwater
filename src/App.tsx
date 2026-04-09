@@ -10,6 +10,7 @@ import { UpdateModal } from "./components/UpdateModal";
 import { NodeHoverPreview } from "./components/NodeHoverPreview";
 import { ZoomIndicator } from "./components/ZoomIndicator";
 import { SearchOverlay } from "./components/SearchOverlay";
+import { MultiSelectToolbar } from "./components/MultiSelectToolbar";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
 import { loadConfig } from "./utils/config";
@@ -185,6 +186,7 @@ export function App() {
       <NodeHoverPreview />
       <ZoomIndicator />
       <SearchOverlay />
+      <MultiSelectToolbar />
       {selectedId && <RightSidebar />}
     </>
   );

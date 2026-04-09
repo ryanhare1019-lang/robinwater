@@ -43,6 +43,7 @@ interface AppState {
   removeFromSelection: (id: string) => void;
   setSelectedIds: (ids: string[]) => void;
   clearSelection: () => void;
+  deleteIdeas: (ids: string[]) => void;
 
   // Actions
   addIdea: (text: string) => void;
@@ -319,6 +320,24 @@ export const useStore = create<AppState>((set, get) => {
     })),
     setSelectedIds: (ids) => set({ selectedIds: ids, selectedId: ids[ids.length - 1] ?? null }),
     clearSelection: () => set({ selectedIds: [], selectedId: null }),
+
+    deleteIdeas: (ids) => {
+      const state = get();
+      const idSet = new Set(ids);
+      const canvas = getActiveCanvas(state);
+      const ideas = canvas.ideas.filter((i) => !idSet.has(i.id));
+      const connections = canvas.connections.filter(
+        (c) => !idSet.has(c.sourceId) && !idSet.has(c.targetId)
+      );
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c, ideas, connections,
+        })),
+        selectedId: idSet.has(state.selectedId ?? '') ? null : state.selectedId,
+        selectedIds: [],
+        similarityLines: computeSimilarityLines(ideas, connections),
+      });
+    },
 
     hydrate: (data) => {
       const active = data.canvases.find((c) => c.id === data.activeCanvasId) || data.canvases[0];
