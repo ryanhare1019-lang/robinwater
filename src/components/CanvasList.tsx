@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useStore } from "../store/useStore";
-import { buildDefaultFilename, buildExportText } from "../utils/export";
+import { buildDefaultFilename, buildExportText, buildDefaultMarkdownFilename, buildExportMarkdown } from "../utils/export";
 import { SettingsModal } from "./SettingsModal";
 
 const menuItemStyle: React.CSSProperties = {
@@ -91,6 +91,29 @@ export function CanvasList() {
       exportTimer.current = setTimeout(() => setExportedId(null), 2000);
     } catch (err) {
       console.error("Export failed:", err);
+    }
+  }, [canvases]);
+
+  const handleExportMarkdown = useCallback(async (canvasId: string) => {
+    setCtxMenu(null);
+    const canvas = canvases.find((c) => c.id === canvasId);
+    if (!canvas) return;
+
+    try {
+      const filePath = await save({
+        defaultPath: buildDefaultMarkdownFilename(canvas.name, new Date()),
+        filters: [{ name: "Markdown", extensions: ["md"] }],
+      });
+
+      if (!filePath) return;
+
+      await writeTextFile(filePath, buildExportMarkdown(canvas));
+
+      setExportedId(canvasId);
+      if (exportTimer.current) clearTimeout(exportTimer.current);
+      exportTimer.current = setTimeout(() => setExportedId(null), 2000);
+    } catch (err) {
+      console.error("Markdown export failed:", err);
     }
   }, [canvases]);
 
@@ -457,7 +480,15 @@ export function CanvasList() {
             onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-active)"; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
           >
-            ↗ EXPORT
+            ↗ EXPORT .TXT
+          </button>
+          <button
+            onClick={() => handleExportMarkdown(ctxMenu.canvasId)}
+            style={menuItemStyle}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-active)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+          >
+            ↗ EXPORT .MD
           </button>
         </div>
       )}
