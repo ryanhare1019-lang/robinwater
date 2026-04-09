@@ -131,6 +131,10 @@ interface AppState {
   setSearchConnectionFilter: (f: 'any' | 'connected' | 'unconnected') => void;
   setSearchDateFilter: (f: 'any' | 'today' | 'week') => void;
   resetSearch: () => void;
+
+  // Shortcuts overlay
+  shortcutsOpen: boolean;
+  setShortcutsOpen: (v: boolean) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -176,6 +180,7 @@ export const useStore = create<AppState>((set, get) => {
     searchTagFilter: null,
     searchConnectionFilter: 'any',
     searchDateFilter: 'any',
+    shortcutsOpen: false,
 
     addIdea: (text: string) => {
       const state = get();
@@ -650,6 +655,9 @@ export const useStore = create<AppState>((set, get) => {
       searchConnectionFilter: 'any',
       searchDateFilter: 'any',
     }),
+
+    // Shortcuts overlay
+    setShortcutsOpen: (v) => set({ shortcutsOpen: v }),
 
     // Tag management
     addTag: (name, color) => {

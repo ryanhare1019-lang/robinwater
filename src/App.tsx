@@ -11,6 +11,7 @@ import { NodeHoverPreview } from "./components/NodeHoverPreview";
 import { ZoomIndicator } from "./components/ZoomIndicator";
 import { SearchOverlay } from "./components/SearchOverlay";
 import { MultiSelectToolbar } from "./components/MultiSelectToolbar";
+import { ShortcutsOverlay } from "./components/ShortcutsOverlay";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
 import { loadConfig } from "./utils/config";
@@ -187,6 +188,7 @@ export function App() {
       <ZoomIndicator />
       <SearchOverlay />
       <MultiSelectToolbar />
+      <ShortcutsOverlay />
       {selectedId && <RightSidebar />}
     </>
   );
