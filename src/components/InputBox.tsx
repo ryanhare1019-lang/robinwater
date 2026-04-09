@@ -37,10 +37,6 @@ export function InputBox() {
           (active instanceof HTMLElement && active.isContentEditable);
         if (!isEditable) {
           focus();
-          if (inputRef.current) {
-            inputRef.current.value = e.key;
-            setValue(e.key);
-          }
         }
       }
     };
