@@ -93,6 +93,7 @@ export function App() {
   const lastAddedAt = useStore((s) => s.lastAddedAt);
   const rightOffset = selectedId ? 320 + 24 : 24;
   const newNodeId = useStore((s) => s.newNodeId);
+  const aiPanelOpen = useStore((s) => s.aiPanelOpen);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const autoTriggerTimer = useRef<ReturnType<typeof setTimeout>>();
   const newestIdeaTextRef = useRef<string>('');
@@ -154,6 +155,18 @@ export function App() {
     };
   }, [lastAddedAt, newNodeId]);
 
+  // Keyboard shortcut for toggling AI panel (Ctrl+.)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === ".") {
+        e.preventDefault();
+        useStore.getState().setAiPanelOpen(!useStore.getState().aiPanelOpen);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <>
       {pendingUpdate && (
@@ -179,7 +192,7 @@ export function App() {
           transition: "right 0.25s var(--ease-out)",
         }}
       >
-        <AiControlsBar />
+        {aiPanelOpen && <AiControlsBar />}
         <InputBox />
       </div>
       <ConnectingLine />

@@ -25,6 +25,7 @@ export function Canvas() {
   const clearSelection = useStore((s) => s.clearSelection);
 
   const ghostNodes = useStore((s) => s.ghostNodes);
+  const aiPanelOpen = useStore((s) => s.aiPanelOpen);
   const canvas = canvases.find((c) => c.id === activeCanvasId);
   const ideas = canvas?.ideas || [];
   const viewport = canvas?.viewport || { x: 0, y: 0, zoom: 1 };
@@ -338,7 +339,7 @@ export function Canvas() {
           {ideas.map((idea) => (
             <IdeaNode key={idea.id} idea={idea} />
           ))}
-          {ghostNodes.map((ghost) => (
+          {aiPanelOpen && ghostNodes.map((ghost) => (
             <GhostNodeCard key={ghost.id} ghost={ghost} />
           ))}
         </div>

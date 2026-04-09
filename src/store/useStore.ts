@@ -135,6 +135,10 @@ interface AppState {
   // Shortcuts overlay
   shortcutsOpen: boolean;
   setShortcutsOpen: (v: boolean) => void;
+
+  // AI panel visibility
+  aiPanelOpen: boolean;
+  setAiPanelOpen: (v: boolean) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -181,6 +185,7 @@ export const useStore = create<AppState>((set, get) => {
     searchConnectionFilter: 'any',
     searchDateFilter: 'any',
     shortcutsOpen: false,
+    aiPanelOpen: true,
 
     addIdea: (text: string) => {
       const state = get();
@@ -658,6 +663,9 @@ export const useStore = create<AppState>((set, get) => {
 
     // Shortcuts overlay
     setShortcutsOpen: (v) => set({ shortcutsOpen: v }),
+
+    // AI panel
+    setAiPanelOpen: (v) => set({ aiPanelOpen: v }),
 
     // Tag management
     addTag: (name, color) => {
