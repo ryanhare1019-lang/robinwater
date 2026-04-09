@@ -369,7 +369,7 @@ export const useStore = create<AppState>((set, get) => {
       if (!ghost) return;
 
       const canvas = getActiveCanvas(state);
-      const keywords = ([] as string[]); // ghost nodes don't need keywords extracted here
+      const keywords = extractKeywords(ghost.text);
       const idea: Idea = {
         id: generateId(),
         text: ghost.text,
@@ -380,9 +380,10 @@ export const useStore = create<AppState>((set, get) => {
         keywords,
       };
 
+      const relatedToId = ghost.relatedToId;
       let connections = canvas.connections;
-      if (ghost.relatedToId && canvas.ideas.some((i) => i.id === ghost.relatedToId)) {
-        const conn: Connection = { id: generateId(), sourceId: ghost.relatedToId!, targetId: idea.id };
+      if (relatedToId && canvas.ideas.find((i) => i.id === relatedToId)) {
+        const conn: Connection = { id: generateId(), sourceId: relatedToId, targetId: idea.id };
         connections = [...connections, conn];
       }
 

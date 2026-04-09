@@ -60,12 +60,15 @@ function buildUserMessage(
   return lines.join('\n');
 }
 
-function parseResponse(raw: string): SuggestionResult[] {
+function parseResponse(raw: string, triggerMode: 'manual' | 'auto'): SuggestionResult[] {
   const parsed = JSON.parse(raw) as { suggestions: SuggestionResult[] };
   if (!Array.isArray(parsed.suggestions)) return [];
-  return parsed.suggestions.filter(
-    (s) => typeof s.text === 'string' && typeof s.relatedTo === 'string' && typeof s.reasoning === 'string'
-  );
+  const limit = triggerMode === 'auto' ? 2 : 5;
+  return parsed.suggestions
+    .filter(
+      (s) => typeof s.text === 'string' && typeof s.relatedTo === 'string' && typeof s.reasoning === 'string'
+    )
+    .slice(0, limit);
 }
 
 export async function fetchSuggestions(
@@ -88,7 +91,7 @@ export async function fetchSuggestions(
 
   // Try parse, retry once on failure
   try {
-    return parseResponse(raw);
+    return parseResponse(raw, triggerMode);
   } catch {
     // One retry
     try {
@@ -102,7 +105,7 @@ export async function fetchSuggestions(
         ],
         512
       );
-      return parseResponse(raw2);
+      return parseResponse(raw2, triggerMode);
     } catch {
       return [];
     }

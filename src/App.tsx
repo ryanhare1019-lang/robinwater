@@ -83,6 +83,7 @@ const AUTO_TRIGGER_DELAY_MS = 3_000;
 export function App() {
   const selectedId = useStore((s) => s.selectedId);
   const lastAddedAt = useStore((s) => s.lastAddedAt);
+  const newNodeId = useStore((s) => s.newNodeId);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const autoTriggerTimer = useRef<ReturnType<typeof setTimeout>>();
   // Track the newest idea text for auto-trigger
@@ -120,13 +121,13 @@ export function App() {
     if (!config?.aiFeatures.ghostNodes) return;
     if (!config?.anthropicApiKey) return;
 
-    // Capture the newest idea text at the moment of trigger
+    // Capture the newest idea text at the moment of trigger, looked up by newNodeId
     const state = useStore.getState();
     const canvas = state.canvases.find((c) => c.id === state.activeCanvasId);
     const ideas = canvas?.ideas || [];
-    if (ideas.length > 0) {
-      newestIdeaTextRef.current = ideas[ideas.length - 1].text;
-    }
+    const newestIdea = newNodeId ? ideas.find((i) => i.id === newNodeId) : undefined;
+    if (!newestIdea) return; // idea already deleted or not found, skip
+    newestIdeaTextRef.current = newestIdea.text;
 
     if (autoTriggerTimer.current) clearTimeout(autoTriggerTimer.current);
     autoTriggerTimer.current = setTimeout(() => {
@@ -136,7 +137,7 @@ export function App() {
     return () => {
       if (autoTriggerTimer.current) clearTimeout(autoTriggerTimer.current);
     };
-  }, [lastAddedAt]);
+  }, [lastAddedAt, newNodeId]);
 
   return (
     <>
