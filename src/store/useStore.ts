@@ -78,10 +78,12 @@ interface AppState {
   // Ghost nodes
   ghostNodes: GhostNode[];
   isSuggestLoading: boolean;
+  isQuestionsLoading: boolean;
   addGhostNodes: (nodes: GhostNode[]) => void;
   acceptGhostNode: (id: string) => void;
   dismissGhostNode: (id: string) => void;
   setSuggestLoading: (v: boolean) => void;
+  setQuestionsLoading: (v: boolean) => void;
 
   // Auto-trigger timing
   lastAddedAt: number;
@@ -127,6 +129,7 @@ export const useStore = create<AppState>((set, get) => {
     deletingNodeId: null,
     ghostNodes: [],
     isSuggestLoading: false,
+    isQuestionsLoading: false,
     lastAddedAt: 0,
     lastAutoTriggerAt: 0,
     isAutoTagLoading: false,
@@ -384,6 +387,23 @@ export const useStore = create<AppState>((set, get) => {
 
       const canvas = getActiveCanvas(state);
       const keywords = extractKeywords(ghost.text);
+
+      // For question nodes, find or create a yellow tag
+      let questionTagId: string | undefined;
+      let updatedTags = canvas.tags || [];
+      if (ghost.type === 'question') {
+        // yellow dot color from TAG_COLORS
+        const YELLOW_COLOR = '#ffd76b';
+        const existing = updatedTags.find((t) => t.color === YELLOW_COLOR);
+        if (existing) {
+          questionTagId = existing.id;
+        } else {
+          const newTag: CustomTag = { id: generateId(), name: 'Question', color: YELLOW_COLOR };
+          updatedTags = [...updatedTags, newTag];
+          questionTagId = newTag.id;
+        }
+      }
+
       const idea: Idea = {
         id: generateId(),
         text: ghost.text,
@@ -392,6 +412,7 @@ export const useStore = create<AppState>((set, get) => {
         y: ghost.y,
         createdAt: new Date().toISOString(),
         keywords,
+        ...(questionTagId ? { tags: [questionTagId] } : {}),
       };
 
       const relatedToId = ghost.relatedToId;
@@ -404,7 +425,10 @@ export const useStore = create<AppState>((set, get) => {
       const ideas = [...canvas.ideas, idea];
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
-          ...c, ideas, connections,
+          ...c,
+          ideas,
+          connections,
+          tags: updatedTags,
         })),
         ghostNodes: state.ghostNodes.filter((g) => g.id !== id),
         newNodeId: idea.id,
@@ -417,6 +441,8 @@ export const useStore = create<AppState>((set, get) => {
     })),
 
     setSuggestLoading: (v) => set({ isSuggestLoading: v }),
+
+    setQuestionsLoading: (v) => set({ isQuestionsLoading: v }),
 
     setLastAutoTriggerAt: (t) => set({ lastAutoTriggerAt: t }),
 

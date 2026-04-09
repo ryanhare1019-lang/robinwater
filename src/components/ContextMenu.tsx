@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useStore } from "../store/useStore";
+import { triggerQuestions } from "../utils/triggerQuestions";
 
 export function ContextMenu() {
   const nodeId = useStore((s) => s.contextMenuNodeId);
@@ -8,6 +9,7 @@ export function ContextMenu() {
   const setConnectingFrom = useStore((s) => s.setConnectingFrom);
   const deleteIdea = useStore((s) => s.deleteIdea);
   const setSelectedId = useStore((s) => s.setSelectedId);
+  const config = useStore((s) => s.config);
 
   useEffect(() => {
     if (!nodeId) return;
@@ -59,6 +61,23 @@ export function ContextMenu() {
       >
         CONNECT TO...
       </button>
+
+      {config?.aiFeatures.questionGeneration && (
+        <>
+          <div style={{ height: 1, background: "var(--border-subtle)" }} />
+          <button
+            onClick={() => {
+              setContextMenu(null, null);
+              triggerQuestions('per-idea', nodeId).catch((e) => console.error('[ContextMenu] question generation failed:', e));
+            }}
+            style={{ ...menuItemStyle, color: "#CCAA44" }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-active)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+          >
+            ? GENERATE QUESTIONS
+          </button>
+        </>
+      )}
 
       <div style={{ height: 1, background: "var(--border-subtle)" }} />
 

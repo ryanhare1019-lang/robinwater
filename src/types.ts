@@ -66,6 +66,7 @@ export interface GhostNode {
   x: number;
   y: number;
   type: 'suggestion' | 'question'; // 'suggestion' for this task
+  questionType?: 'challenge' | 'expand' | 'connect'; // only for type === 'question'
 }
 
 // New multi-canvas save format

@@ -34,6 +34,13 @@ export function GhostNodeCard({ ghost }: Props) {
     [ghost.id, dismissGhostNode]
   );
 
+  const isQuestion = ghost.type === 'question';
+  const borderColor = isQuestion ? '#3A3520' : '#2A2A2A';
+  const bottomLabel = isQuestion
+    ? `? ${ghost.questionType?.toUpperCase() || 'QUESTION'}`
+    : '✦ SUGGESTED';
+  const labelColor = isQuestion ? '#CCAA44' : '#444444';
+
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
@@ -46,7 +53,7 @@ export function GhostNodeCard({ ghost }: Props) {
         width: 180,
         padding: "12px",
         background: "rgba(10, 10, 10, 0.5)",
-        border: "1px dashed #2A2A2A",
+        border: `1px dashed ${borderColor}`,
         borderRadius: 0,
         fontFamily: "var(--font-mono)",
         fontSize: "13px",
@@ -113,13 +120,13 @@ export function GhostNodeCard({ ghost }: Props) {
         <span
           style={{
             fontSize: "10px",
-            color: "#444444",
+            color: labelColor,
             fontFamily: "var(--font-mono)",
             textTransform: "uppercase",
             letterSpacing: "0.08em",
           }}
         >
-          ✦ SUGGESTED
+          {bottomLabel}
         </span>
 
         {isHovered && (
