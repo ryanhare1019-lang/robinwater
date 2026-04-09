@@ -11,12 +11,19 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
   const [showKey, setShowKey] = useState(false);
   const [features, setFeatures] = useState({ ...initialConfig.aiFeatures });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
-    await saveConfig({ anthropicApiKey: apiKey, aiFeatures: features });
-    setSaving(false);
-    onClose();
+    setError(null);
+    try {
+      await saveConfig({ anthropicApiKey: apiKey, aiFeatures: features });
+      setSaving(false);
+      onClose();
+    } catch (e) {
+      setSaving(false);
+      setError(e instanceof Error ? e.message : String(e));
+    }
   };
 
   const toggleFeature = (key: keyof typeof features) => {
@@ -232,6 +239,21 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
               </div>
             ))}
           </div>
+
+          {/* Save error */}
+          {error && (
+            <div style={{ marginBottom: 12 }}>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontFamily: 'var(--font-mono)',
+                  color: '#CC4444',
+                }}
+              >
+                {error}
+              </span>
+            </div>
+          )}
 
           {/* Buttons */}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>

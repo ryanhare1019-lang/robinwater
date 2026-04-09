@@ -4,7 +4,6 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useStore } from "../store/useStore";
 import { buildDefaultFilename, buildExportText } from "../utils/export";
 import { SettingsModal } from "./SettingsModal";
-import { loadConfig } from "../utils/config";
 
 const menuItemStyle: React.CSSProperties = {
   display: "block",
@@ -33,7 +32,7 @@ export function CanvasList() {
   const renameCanvas = useStore((s) => s.renameCanvas);
   const deleteCanvas = useStore((s) => s.deleteCanvas);
   const config = useStore((s) => s.config);
-  const setConfig = useStore((s) => s.setConfig);
+  const reloadConfig = useStore((s) => s.reloadConfig);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
@@ -468,8 +467,7 @@ export function CanvasList() {
           initialConfig={config}
           onClose={() => {
             setSettingsOpen(false);
-            // Reload config into store after potential save
-            loadConfig().then(setConfig);
+            reloadConfig();
           }}
         />
       )}

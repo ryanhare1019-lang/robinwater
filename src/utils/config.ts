@@ -46,12 +46,8 @@ export async function loadConfig(): Promise<AppConfig> {
 }
 
 export async function saveConfig(config: AppConfig): Promise<void> {
-  try {
-    const dir = await appDataDir();
-    await mkdir(dir, { recursive: true }).catch(() => {});
-    const filePath = await join(dir, CONFIG_FILENAME);
-    await writeTextFile(filePath, JSON.stringify(config, null, 2));
-  } catch (e) {
-    console.error('Failed to save config:', e);
-  }
+  const dir = await appDataDir();
+  await mkdir(dir, { recursive: true }).catch(() => {});
+  const filePath = await join(dir, CONFIG_FILENAME);
+  await writeTextFile(filePath, JSON.stringify(config, null, 2));
 }

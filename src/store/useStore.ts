@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Idea, Viewport, AppData, Canvas, Connection, CustomTag } from "../types";
-import { AppConfig } from "../utils/config";
+import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
@@ -71,6 +71,7 @@ interface AppState {
   // Config
   config: AppConfig | null;
   setConfig: (config: AppConfig) => void;
+  reloadConfig: () => Promise<void>;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -334,6 +335,10 @@ export const useStore = create<AppState>((set, get) => {
 
     // Config
     setConfig: (config) => set({ config }),
+    reloadConfig: async () => {
+      const config = await loadConfig();
+      set({ config });
+    },
 
     // Tag management
     addTag: (name, color) => {
