@@ -287,6 +287,16 @@ export function Canvas() {
         setViewport({ x: cx - canvasX * newZoom, y: cy - canvasY * newZoom, zoom: newZoom });
       }
 
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === 'z' && !inInput) {
+        e.preventDefault();
+        useStore.getState().undo();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key === 'z') || e.key === 'y') && !inInput) {
+        e.preventDefault();
+        useStore.getState().redo();
+      }
+
       if ((e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowUp") && !inInput) {
         if (ideas.length === 0) return;
         e.preventDefault();

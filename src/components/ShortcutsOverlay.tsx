@@ -17,6 +17,8 @@ const SECTIONS = [
       { keys: ["Enter"], description: "Add idea (in text input)" },
       { keys: ["Delete", "Backspace"], description: "Delete selected idea (2× confirm)" },
       { keys: ["Escape"], description: "Deselect / cancel" },
+      { keys: ["Ctrl+Z"], description: "Undo" },
+      { keys: ["Ctrl+Shift+Z", "Ctrl+Y"], description: "Redo" },
     ],
   },
   {

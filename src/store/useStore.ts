@@ -10,6 +10,36 @@ import { generateId } from "../utils/id";
 // Module-level storage for flash animation timers — not persisted to disk
 let flashTimers: ReturnType<typeof setTimeout>[] = [];
 
+// Undo/redo history stacks — module-level, not persisted
+interface HistoryEntry {
+  canvasId: string;
+  ideas: Idea[];
+  connections: Connection[];
+  tags: CustomTag[];
+  aiTagDefinitions: AITagDefinition[];
+}
+
+const undoStack: HistoryEntry[] = [];
+const redoStack: HistoryEntry[] = [];
+const MAX_HISTORY = 50;
+
+function snapshotCanvas(canvas: Canvas): HistoryEntry {
+  return {
+    canvasId: canvas.id,
+    ideas: [...canvas.ideas],
+    connections: [...canvas.connections],
+    tags: [...(canvas.tags || [])],
+    aiTagDefinitions: [...(canvas.aiTagDefinitions || [])],
+  };
+}
+
+function pushHistory(state: { canvases: Canvas[]; activeCanvasId: string }): void {
+  const canvas = getActiveCanvas(state);
+  undoStack.push(snapshotCanvas(canvas));
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  redoStack.length = 0; // clear redo on new action
+}
+
 function createDefaultCanvas(name = "Ideas"): Canvas {
   return {
     id: generateId(),
@@ -139,6 +169,10 @@ interface AppState {
   // AI panel visibility
   aiPanelOpen: boolean;
   setAiPanelOpen: (v: boolean) => void;
+
+  // Undo / redo
+  undo: () => void;
+  redo: () => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -188,6 +222,7 @@ export const useStore = create<AppState>((set, get) => {
     aiPanelOpen: true,
 
     addIdea: (text: string) => {
+      pushHistory(get());
       const state = get();
       const canvas = getActiveCanvas(state);
       const keywords = extractKeywords(text);
@@ -212,6 +247,7 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     addConnectedIdea: (text, parentId) => {
+      pushHistory(get());
       const state = get();
       const canvas = getActiveCanvas(state);
       const parent = canvas.ideas.find((i) => i.id === parentId);
@@ -269,6 +305,9 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     updateIdea: (id, updates) => {
+      if (updates.text !== undefined || updates.description !== undefined || updates.tags !== undefined) {
+        pushHistory(get());
+      }
       const state = get();
       const canvas = getActiveCanvas(state);
       const ideas = canvas.ideas.map((idea) => {
@@ -292,6 +331,7 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     deleteIdea: (id) => {
+      pushHistory(get());
       const state = get();
       const canvas = getActiveCanvas(state);
       const ideas = canvas.ideas.filter((i) => i.id !== id);
@@ -332,6 +372,7 @@ export const useStore = create<AppState>((set, get) => {
     clearSelection: () => set({ selectedIds: [], selectedId: null }),
 
     deleteIdeas: (ids) => {
+      pushHistory(get());
       const state = get();
       const idSet = new Set(ids);
       const canvas = getActiveCanvas(state);
@@ -383,6 +424,8 @@ export const useStore = create<AppState>((set, get) => {
       const state = get();
       const canvas = state.canvases.find((c) => c.id === id);
       if (canvas) {
+        undoStack.length = 0;
+        redoStack.length = 0;
         set({
           activeCanvasId: id,
           selectedId: null,
@@ -404,6 +447,8 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     deleteCanvas: (id) => {
+      undoStack.length = 0;
+      redoStack.length = 0;
       const state = get();
       if (state.canvases.length <= 1) return;
       const remaining = state.canvases.filter((c) => c.id !== id);
@@ -432,6 +477,7 @@ export const useStore = create<AppState>((set, get) => {
           (c.sourceId === targetId && c.targetId === sourceId)
       );
       if (exists) return;
+      pushHistory(get());
       const conn: Connection = { id: generateId(), sourceId, targetId };
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
@@ -442,6 +488,7 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     removeConnection: (id) => {
+      pushHistory(get());
       const state = get();
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
@@ -478,6 +525,7 @@ export const useStore = create<AppState>((set, get) => {
       const state = get();
       const ghost = state.ghostNodes.find((g) => g.id === id);
       if (!ghost) return;
+      pushHistory(get());
 
       const canvas = getActiveCanvas(state);
       const keywords = extractKeywords(ghost.text);
@@ -543,6 +591,7 @@ export const useStore = create<AppState>((set, get) => {
     setAutoTagLoading: (v) => set({ isAutoTagLoading: v }),
 
     applyAiTags: (tagDefinitions) => {
+      pushHistory(get());
       const state = get();
       // Build a lookup: ideaId -> array of tag ids
       const ideaTagMap: Record<string, string[]> = {};
@@ -667,8 +716,59 @@ export const useStore = create<AppState>((set, get) => {
     // AI panel
     setAiPanelOpen: (v) => set({ aiPanelOpen: v }),
 
+    // Undo / redo
+    undo: () => {
+      if (undoStack.length === 0) return;
+      const state = get();
+      const canvas = getActiveCanvas(state);
+
+      // Save current state to redo stack
+      redoStack.push(snapshotCanvas(canvas));
+
+      // Pop from undo stack
+      const entry = undoStack.pop()!;
+
+      // Only restore if same canvas — cross-canvas undo is confusing
+      if (entry.canvasId !== state.activeCanvasId) return;
+
+      set({
+        canvases: state.canvases.map((c) =>
+          c.id === entry.canvasId
+            ? { ...c, ideas: entry.ideas, connections: entry.connections, tags: entry.tags, aiTagDefinitions: entry.aiTagDefinitions }
+            : c
+        ),
+        similarityLines: computeSimilarityLines(entry.ideas, entry.connections),
+        selectedId: null,
+        selectedIds: [],
+      });
+    },
+
+    redo: () => {
+      if (redoStack.length === 0) return;
+      const state = get();
+      const canvas = getActiveCanvas(state);
+
+      undoStack.push(snapshotCanvas(canvas));
+
+      const entry = redoStack.pop()!;
+
+      if (entry.canvasId !== state.activeCanvasId) return;
+
+      set({
+        canvases: state.canvases.map((c) =>
+          c.id === entry.canvasId
+            ? { ...c, ideas: entry.ideas, connections: entry.connections, tags: entry.tags, aiTagDefinitions: entry.aiTagDefinitions }
+            : c
+        ),
+        similarityLines: computeSimilarityLines(entry.ideas, entry.connections),
+        selectedId: null,
+        selectedIds: [],
+      });
+    },
+
     // Tag management
     addTag: (name, color) => {
+      pushHistory(get());
       const state = get();
       const tag: CustomTag = { id: generateId(), name, color };
       set({
@@ -679,6 +779,7 @@ export const useStore = create<AppState>((set, get) => {
     },
 
     removeTag: (id) => {
+      pushHistory(get());
       const state = get();
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
