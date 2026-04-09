@@ -5,7 +5,7 @@ import { generateId } from './id';
 
 export async function triggerAutoTag(): Promise<void> {
   const state = useStore.getState();
-  const { config, canvases, activeCanvasId, applyAiTags, setAutoTagLoading, updateIdea } = state;
+  const { config, canvases, activeCanvasId, applyAiTags, setAutoTagLoading } = state;
 
   const canvas = canvases.find((c) => c.id === activeCanvasId) || canvases[0];
   if (!canvas) return;
@@ -34,7 +34,7 @@ export async function triggerAutoTag(): Promise<void> {
     const matchedCustomTagAssignments: Array<{ tagId: string; ideaIds: string[] }> = [];
 
     for (const raw of rawTags) {
-      const label = raw.label;
+      const { label } = raw;
 
       // Match idea texts to idea IDs (case-insensitive)
       const ideaIds = raw.ideaTexts
@@ -45,6 +45,9 @@ export async function triggerAutoTag(): Promise<void> {
           return matched?.id;
         })
         .filter((id): id is string => id !== undefined);
+
+      // Skip tags Claude returned with no matched ideas
+      if (ideaIds.length === 0) continue;
 
       // Check if label matches an existing user-created CustomTag (case-insensitive)
       const matchedCustomTag = (canvas.tags || []).find(
@@ -66,21 +69,22 @@ export async function triggerAutoTag(): Promise<void> {
     }
 
     // Apply new AI tags via the store action (handles idea.aiTags[])
-    applyAiTags(newAiTagDefinitions);
+    // Guard: skip if empty to avoid wiping existing AI tags
+    if (newAiTagDefinitions.length > 0) {
+      applyAiTags(newAiTagDefinitions);
+    }
 
     // Apply matched custom tag assignments directly to idea.tags[]
     for (const { tagId, ideaIds } of matchedCustomTagAssignments) {
-      // Re-read canvas state after applyAiTags may have updated it
-      const freshCanvas = useStore.getState().canvases.find((c) => c.id === activeCanvasId)
-        || useStore.getState().canvases[0];
-
       for (const ideaId of ideaIds) {
+        // Re-read canvas state per idea so each updateIdea call sees the latest writes
+        const freshCanvas = useStore.getState().canvases.find((c) => c.id === useStore.getState().activeCanvasId);
         const idea = freshCanvas?.ideas.find((i) => i.id === ideaId);
         if (!idea) continue;
         const existingTags = idea.tags || [];
         // Avoid duplicates
         if (!existingTags.includes(tagId)) {
-          updateIdea(ideaId, { tags: [...existingTags, tagId] });
+          useStore.getState().updateIdea(ideaId, { tags: [...existingTags, tagId] });
         }
       }
     }
