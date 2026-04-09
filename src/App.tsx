@@ -58,11 +58,17 @@ async function loadData(): Promise<AppData | null> {
         ...c,
         connections: c.connections || [],
         ideas: c.ideas.map((idea: any) => {
-          if (idea.color !== undefined && !idea.tags) {
-            const { color, ...rest } = idea;
-            return { ...rest, tags: [color] };
+          let normalized = idea;
+          // Migrate legacy color→tags format
+          if (normalized.color !== undefined && !normalized.tags) {
+            const { color, ...rest } = normalized;
+            normalized = { ...rest, tags: [color] };
           }
-          return idea;
+          // Ensure description always exists (added in later version)
+          if (normalized.description === undefined) {
+            normalized = { ...normalized, description: "" };
+          }
+          return normalized;
         }),
       }));
       return data;

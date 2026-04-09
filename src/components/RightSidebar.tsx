@@ -70,7 +70,7 @@ export function RightSidebar() {
   useEffect(() => {
     if (idea) {
       setTitleValue(idea.text);
-      setDescValue(idea.description);
+      setDescValue(idea.description ?? "");
       setDeleteConfirm(false);
       setClosing(false);
     }
