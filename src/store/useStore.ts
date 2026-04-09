@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition, TAG_COLORS } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition, TAG_COLORS, CanvasFolder } from "../types";
 import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
@@ -92,6 +92,14 @@ interface AppState {
   renameCanvas: (id: string, name: string) => void;
   deleteCanvas: (id: string) => void;
   setLeftSidebarOpen: (open: boolean) => void;
+
+  // Folder management
+  folders: CanvasFolder[];
+  addFolder: (name?: string) => void;
+  deleteFolder: (id: string) => void;
+  renameFolder: (id: string, name: string) => void;
+  toggleFolderCollapse: (id: string) => void;
+  moveCanvasToFolder: (canvasId: string, folderId: string | null) => void;
 
   // Connections
   addConnection: (sourceId: string, targetId: string) => void;
@@ -196,6 +204,7 @@ export const useStore = create<AppState>((set, get) => {
   return {
     canvases: [defaultCanvas],
     activeCanvasId: defaultCanvas.id,
+    folders: [],
     config: null,
     selectedId: null,
     selectedIds: [],
@@ -398,6 +407,7 @@ export const useStore = create<AppState>((set, get) => {
       set({
         canvases: data.canvases,
         activeCanvasId: active.id,
+        folders: data.folders || [],
         similarityLines: computeSimilarityLines(active.ideas, active.connections),
       });
     },
@@ -407,6 +417,7 @@ export const useStore = create<AppState>((set, get) => {
       return {
         canvases: state.canvases,
         activeCanvasId: state.activeCanvasId,
+        folders: state.folders,
       };
     },
 
@@ -462,11 +473,44 @@ export const useStore = create<AppState>((set, get) => {
         activeCanvasId: newActive,
         selectedId: null,
         selectedIds: [],
+        folders: state.folders.map((f) => ({
+          ...f,
+          canvasIds: f.canvasIds.filter((cid) => cid !== id),
+        })),
         similarityLines: computeSimilarityLines(newActiveCanvas.ideas, newActiveCanvas.connections),
       });
     },
 
     setLeftSidebarOpen: (open) => set({ leftSidebarOpen: open }),
+
+    // Folder management
+    addFolder: (name) => {
+      const folder: CanvasFolder = { id: generateId(), name: name || 'Folder', canvasIds: [], collapsed: false };
+      set((state) => ({ folders: [...state.folders, folder] }));
+    },
+
+    deleteFolder: (id) => {
+      set((state) => ({ folders: state.folders.filter((f) => f.id !== id) }));
+    },
+
+    renameFolder: (id, name) => {
+      set((state) => ({ folders: state.folders.map((f) => f.id === id ? { ...f, name } : f) }));
+    },
+
+    toggleFolderCollapse: (id) => {
+      set((state) => ({ folders: state.folders.map((f) => f.id === id ? { ...f, collapsed: !f.collapsed } : f) }));
+    },
+
+    moveCanvasToFolder: (canvasId, folderId) => {
+      set((state) => ({
+        folders: state.folders.map((f) => {
+          if (folderId !== null && f.id === folderId) {
+            return f.canvasIds.includes(canvasId) ? f : { ...f, canvasIds: [...f.canvasIds, canvasId] };
+          }
+          return { ...f, canvasIds: f.canvasIds.filter((id) => id !== canvasId) };
+        }),
+      }));
+    },
 
     // Connections
     addConnection: (sourceId, targetId) => {

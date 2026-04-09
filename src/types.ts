@@ -70,10 +70,18 @@ export interface GhostNode {
   questionType?: 'challenge' | 'expand' | 'connect'; // only for type === 'question'
 }
 
+export interface CanvasFolder {
+  id: string;
+  name: string;
+  canvasIds: string[];  // IDs of canvases in this folder
+  collapsed: boolean;
+}
+
 // New multi-canvas save format
 export interface AppData {
   canvases: Canvas[];
   activeCanvasId: string;
+  folders?: CanvasFolder[];  // optional for backward compat
 }
 
 // Legacy v1 format for migration
