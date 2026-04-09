@@ -48,6 +48,7 @@ export function SimilarityLines() {
         const from = ideasById.get(line.fromId);
         const to = ideasById.get(line.toId);
         if (!from || !to) return null;
+        const isTagLine = line.reason === 'tag';
         return (
           <line
             key={key}
@@ -57,11 +58,12 @@ export function SimilarityLines() {
             y2={to.y + 22}
             stroke="var(--line-color)"
             strokeWidth={1}
-            opacity={0.07}
+            opacity={isTagLine ? 0.12 : 0.07}
+            strokeDasharray={isTagLine ? "4 6" : undefined}
             style={
               isNew
                 ? {
-                    strokeDasharray: 1000,
+                    strokeDasharray: isTagLine ? "4 6" : "1000",
                     strokeDashoffset: 1000,
                     animation: "line-draw 0.4s var(--ease-out) forwards",
                   }

@@ -169,7 +169,7 @@ export const useStore = create<AppState>((set, get) => {
           ...c, ideas,
         })),
         newNodeId: idea.id,
-        similarityLines: computeSimilarityLines(ideas),
+        similarityLines: computeSimilarityLines(ideas, canvas.connections),
         lastAddedAt: Date.now(),
       });
     },
@@ -226,7 +226,7 @@ export const useStore = create<AppState>((set, get) => {
           ...c, ideas, connections,
         })),
         newNodeId: idea.id,
-        similarityLines: computeSimilarityLines(ideas),
+        similarityLines: computeSimilarityLines(ideas, connections),
         lastAddedAt: Date.now(),
       });
     },
@@ -247,9 +247,9 @@ export const useStore = create<AppState>((set, get) => {
           ...c, ideas,
         })),
       };
-      // Only recompute similarity when keywords may have changed (text update), not on position/size drags
-      if (updates.text !== undefined) {
-        nextState.similarityLines = computeSimilarityLines(ideas);
+      // Only recompute similarity when keywords or tags may have changed, not on position/size drags
+      if (updates.text !== undefined || updates.tags !== undefined) {
+        nextState.similarityLines = computeSimilarityLines(ideas, canvas.connections);
       }
       set(nextState);
     },
@@ -266,7 +266,7 @@ export const useStore = create<AppState>((set, get) => {
           ...c, ideas, connections,
         })),
         selectedId: state.selectedId === id ? null : state.selectedId,
-        similarityLines: computeSimilarityLines(ideas),
+        similarityLines: computeSimilarityLines(ideas, connections),
         deletingNodeId: null,
       });
     },
@@ -289,7 +289,7 @@ export const useStore = create<AppState>((set, get) => {
       set({
         canvases: data.canvases,
         activeCanvasId: active.id,
-        similarityLines: computeSimilarityLines(active.ideas),
+        similarityLines: computeSimilarityLines(active.ideas, active.connections),
       });
     },
 
@@ -322,7 +322,7 @@ export const useStore = create<AppState>((set, get) => {
           selectedId: null,
           newNodeId: null,
           connectingFrom: null,
-          similarityLines: computeSimilarityLines(canvas.ideas),
+          similarityLines: computeSimilarityLines(canvas.ideas, canvas.connections),
           ghostNodes: [],
         });
       }
@@ -346,7 +346,7 @@ export const useStore = create<AppState>((set, get) => {
         canvases: remaining,
         activeCanvasId: newActive,
         selectedId: null,
-        similarityLines: computeSimilarityLines(newActiveCanvas.ideas),
+        similarityLines: computeSimilarityLines(newActiveCanvas.ideas, newActiveCanvas.connections),
       });
     },
 
@@ -457,7 +457,7 @@ export const useStore = create<AppState>((set, get) => {
         })),
         ghostNodes: state.ghostNodes.filter((g) => g.id !== id),
         newNodeId: idea.id,
-        similarityLines: computeSimilarityLines(ideas),
+        similarityLines: computeSimilarityLines(ideas, connections),
       });
     },
 
@@ -496,27 +496,30 @@ export const useStore = create<AppState>((set, get) => {
           color: aiTag.color,
         }));
 
+      const updatedIdeas = canvas.ideas.map((idea) => {
+        const aiTagIds = ideaTagMap[idea.id] || [];
+        // Also add AI tag IDs to idea.tags[] so Tags bar filtering works
+        const newTagIds = newCustomTags.map((t) => t.id).filter((id) => aiTagIds.includes(id));
+        const existingTagIds = idea.tags || [];
+        const mergedTagIds = [
+          ...existingTagIds,
+          ...newTagIds.filter((id) => !existingTagIds.includes(id)),
+        ];
+        return {
+          ...idea,
+          aiTags: aiTagIds,
+          tags: mergedTagIds,
+        };
+      });
+
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
           ...c,
           aiTagDefinitions: tagDefinitions,
           tags: [...(c.tags || []), ...newCustomTags],
-          ideas: c.ideas.map((idea) => {
-            const aiTagIds = ideaTagMap[idea.id] || [];
-            // Also add AI tag IDs to idea.tags[] so Tags bar filtering works
-            const newTagIds = newCustomTags.map((t) => t.id).filter((id) => aiTagIds.includes(id));
-            const existingTagIds = idea.tags || [];
-            const mergedTagIds = [
-              ...existingTagIds,
-              ...newTagIds.filter((id) => !existingTagIds.includes(id)),
-            ];
-            return {
-              ...idea,
-              aiTags: aiTagIds,
-              tags: mergedTagIds,
-            };
-          }),
+          ideas: updatedIdeas,
         })),
+        similarityLines: computeSimilarityLines(updatedIdeas, canvas.connections),
       });
 
       // Cancel any existing flash timers before starting new ones
