@@ -78,17 +78,12 @@ export function InputBox() {
     [addIdea, addConnectedIdea, selectedId]
   );
 
-  const rightOffset = selectedId ? 320 + 24 : 24;
   const inputWidth = Math.max(260, value.length * 9 + 40);
 
   return (
     <div
       style={{
-        position: "fixed",
-        bottom: 24,
-        right: rightOffset,
-        zIndex: 1000,
-        transition: "right 0.25s var(--ease-out)",
+        position: "relative",
       }}
     >
       <div

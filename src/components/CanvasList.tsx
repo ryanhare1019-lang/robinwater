@@ -33,13 +33,14 @@ export function CanvasList() {
   const deleteCanvas = useStore((s) => s.deleteCanvas);
   const config = useStore((s) => s.config);
   const reloadConfig = useStore((s) => s.reloadConfig);
+  const settingsOpen = useStore((s) => s.settingsModalOpen);
+  const setSettingsOpen = useStore((s) => s.setSettingsModalOpen);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ canvasId: string; x: number; y: number } | null>(null);
   const [exportedId, setExportedId] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const deleteTimer = useRef<ReturnType<typeof setTimeout>>();
   const exportTimer = useRef<ReturnType<typeof setTimeout>>();

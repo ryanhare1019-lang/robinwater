@@ -75,6 +75,14 @@ interface AppState {
   setConfig: (config: AppConfig) => void;
   reloadConfig: () => Promise<void>;
 
+  // Settings modal
+  settingsModalOpen: boolean;
+  setSettingsModalOpen: (v: boolean) => void;
+
+  // Suggest cooldown
+  suggestCooldownUntil: number;
+  setSuggestCooldownUntil: (t: number) => void;
+
   // Ghost nodes
   ghostNodes: GhostNode[];
   isSuggestLoading: boolean;
@@ -135,6 +143,8 @@ export const useStore = create<AppState>((set, get) => {
     isAutoTagLoading: false,
     tagJustTagged: [],
     tagFlashTimers: [],
+    settingsModalOpen: false,
+    suggestCooldownUntil: 0,
 
     addIdea: (text: string) => {
       const state = get();
@@ -376,6 +386,12 @@ export const useStore = create<AppState>((set, get) => {
       const config = await loadConfig();
       set({ config });
     },
+
+    // Settings modal
+    setSettingsModalOpen: (v) => set({ settingsModalOpen: v }),
+
+    // Suggest cooldown
+    setSuggestCooldownUntil: (t) => set({ suggestCooldownUntil: t }),
 
     // Ghost nodes
     addGhostNodes: (nodes) => set((state) => ({ ghostNodes: [...state.ghostNodes, ...nodes] })),

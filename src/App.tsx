@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Canvas } from "./components/Canvas";
 import { InputBox } from "./components/InputBox";
+import { AiControlsBar } from "./components/AiControlsBar";
 import { RightSidebar } from "./components/RightSidebar";
 import { CanvasList } from "./components/CanvasList";
 import { ContextMenu } from "./components/ContextMenu";
@@ -83,6 +84,7 @@ const AUTO_TRIGGER_DELAY_MS = 3_000;
 export function App() {
   const selectedId = useStore((s) => s.selectedId);
   const lastAddedAt = useStore((s) => s.lastAddedAt);
+  const rightOffset = selectedId ? 320 + 24 : 24;
   const newNodeId = useStore((s) => s.newNodeId);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const autoTriggerTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -145,7 +147,22 @@ export function App() {
       <div className="vignette" />
       <div className="vignette-sides" style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 500 }} />
       <CanvasList />
-      <InputBox />
+      <div
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: rightOffset,
+          zIndex: 1000,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          alignItems: "flex-end",
+          transition: "right 0.25s var(--ease-out)",
+        }}
+      >
+        <AiControlsBar />
+        <InputBox />
+      </div>
       <ConnectingLine />
       <ContextMenu />
       {selectedId && <RightSidebar />}
