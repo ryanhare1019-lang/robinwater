@@ -485,14 +485,37 @@ export const useStore = create<AppState>((set, get) => {
         }
       }
 
+      // Create CustomTag entries for new AI tags so they appear in the Tags bar
+      const canvas = getActiveCanvas(state);
+      const existingTagNames = new Set((canvas?.tags || []).map((t) => t.name.toUpperCase()));
+      const newCustomTags: CustomTag[] = tagDefinitions
+        .filter((aiTag) => !existingTagNames.has(aiTag.label.toUpperCase()))
+        .map((aiTag) => ({
+          id: aiTag.id,
+          name: aiTag.label,
+          color: aiTag.color,
+        }));
+
       set({
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
           ...c,
           aiTagDefinitions: tagDefinitions,
-          ideas: c.ideas.map((idea) => ({
-            ...idea,
-            aiTags: ideaTagMap[idea.id] || [],
-          })),
+          tags: [...(c.tags || []), ...newCustomTags],
+          ideas: c.ideas.map((idea) => {
+            const aiTagIds = ideaTagMap[idea.id] || [];
+            // Also add AI tag IDs to idea.tags[] so Tags bar filtering works
+            const newTagIds = newCustomTags.map((t) => t.id).filter((id) => aiTagIds.includes(id));
+            const existingTagIds = idea.tags || [];
+            const mergedTagIds = [
+              ...existingTagIds,
+              ...newTagIds.filter((id) => !existingTagIds.includes(id)),
+            ];
+            return {
+              ...idea,
+              aiTags: aiTagIds,
+              tags: mergedTagIds,
+            };
+          }),
         })),
       });
 
