@@ -39,7 +39,7 @@ const SECTIONS = [
     shortcuts: [
       { keys: ["Ctrl+F"], description: "Toggle search bar" },
       { keys: ["Ctrl+."], description: "Toggle AI panel" },
-      { keys: ["?"], description: "Toggle this help overlay" },
+      { keys: ["?", "Ctrl+/"], description: "Toggle this help overlay" },
     ],
   },
 ];

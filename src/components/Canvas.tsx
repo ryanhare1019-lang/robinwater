@@ -346,6 +346,13 @@ export function Canvas() {
         useStore.getState().redo();
       }
 
+      if ((e.ctrlKey || e.metaKey) && (e.key === '/' || e.key === '?')) {
+        e.preventDefault();
+        if (!inInput) {
+          useStore.getState().setShortcutsOpen(!useStore.getState().shortcutsOpen);
+        }
+      }
+
       if ((e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowUp") && !inInput) {
         if (ideas.length === 0) return;
         e.preventDefault();
