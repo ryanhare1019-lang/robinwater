@@ -22,7 +22,12 @@ export function getTagColor(label: string): string {
   return AI_TAG_PALETTE[hash];
 }
 
-const SYSTEM_PROMPT = `You are analyzing a brainstorming canvas to identify thematic groups. Look at the ideas and their connections, then create descriptive tag labels for groups of related ideas.
+function buildSystemPrompt(existingTagNames: string[]): string {
+  const existingTagsRule = existingTagNames.length > 0
+    ? `\n- If any of these existing user tags are relevant, PREFER using them exactly as written: ${existingTagNames.join(', ')}. Only invent a new tag name if no existing tag fits.`
+    : '';
+
+  return `You are analyzing a brainstorming canvas to identify thematic groups. Look at the ideas and their connections, then create descriptive tag labels for groups of related ideas.
 
 Rules:
 - Create 2-6 tags depending on how many distinct themes you see.
@@ -30,15 +35,17 @@ Rules:
 - Every idea should get at least one tag. Some ideas may get multiple tags if they bridge themes.
 - Don't create a tag for fewer than 2 ideas.
 - Tags should reflect the actual content, not generic categories.
-- If the canvas has very few ideas (under 5), create 1-2 tags at most.
+- If the canvas has very few ideas (under 5), create 1-2 tags at most.${existingTagsRule}
 
 Respond ONLY with valid JSON, no markdown, no backticks, no preamble:
 {"tags": [{"label": "TAG LABEL IN UPPERCASE", "ideaTexts": ["exact text of idea 1", "exact text of idea 2"]}]}`;
+}
 
 export async function fetchAutoTags(
   apiKey: string,
   canvasName: string,
   canvas: Canvas,
+  existingTagNames: string[] = [],
 ): Promise<Array<{ label: string; ideaTexts: string[] }>> {
   // Truncate to 40 most recent ideas
   const ideas = canvas.ideas.slice(-40);
@@ -70,6 +77,8 @@ ${ideaLines.join('\n')}
 
 Analyze these and create thematic tags.`;
 
+  const systemPrompt = buildSystemPrompt(existingTagNames);
+
   const parseResponse = (raw: string): Array<{ label: string; ideaTexts: string[] }> => {
     const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     const parsed = JSON.parse(stripped) as { tags: Array<{ label: string; ideaTexts: string[] }> };
@@ -78,12 +87,12 @@ Analyze these and create thematic tags.`;
 
   let raw: string;
   try {
-    raw = await callClaude(apiKey, SYSTEM_PROMPT, [{ role: 'user', content: userMessage }], 1024);
+    raw = await callClaude(apiKey, systemPrompt, [{ role: 'user', content: userMessage }], 1024);
     return parseResponse(raw);
   } catch (firstError) {
     console.warn('fetchAutoTags: first attempt failed, retrying:', firstError);
     // Retry once
-    raw = await callClaude(apiKey, SYSTEM_PROMPT, [{ role: 'user', content: userMessage }], 1024);
+    raw = await callClaude(apiKey, systemPrompt, [{ role: 'user', content: userMessage }], 1024);
     return parseResponse(raw);
   }
 }
