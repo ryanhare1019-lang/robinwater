@@ -79,7 +79,8 @@ Analyze these and create thematic tags.`;
   try {
     raw = await callClaude(apiKey, SYSTEM_PROMPT, [{ role: 'user', content: userMessage }], 1024);
     return parseResponse(raw);
-  } catch (_firstError) {
+  } catch (firstError) {
+    console.warn('fetchAutoTags: first attempt failed, retrying:', firstError);
     // Retry once
     raw = await callClaude(apiKey, SYSTEM_PROMPT, [{ role: 'user', content: userMessage }], 1024);
     return parseResponse(raw);

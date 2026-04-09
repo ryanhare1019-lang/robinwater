@@ -18,6 +18,7 @@ function createDefaultCanvas(name = "Ideas"): Canvas {
     connections: [],
     viewport: { x: 0, y: 0, zoom: 1 },
     tags: [],
+    aiTagDefinitions: [],
   };
 }
 
@@ -90,6 +91,7 @@ interface AppState {
   // AI Tagging
   isAutoTagLoading: boolean;
   tagJustTagged: string[];
+  tagFlashTimers: ReturnType<typeof setTimeout>[];
   applyAiTags: (tagDefinitions: AITagDefinition[]) => void;
   removeAiTag: (tagId: string) => void;
   renameAiTag: (tagId: string, newLabel: string) => void;
@@ -129,6 +131,7 @@ export const useStore = create<AppState>((set, get) => {
     lastAutoTriggerAt: 0,
     isAutoTagLoading: false,
     tagJustTagged: [],
+    tagFlashTimers: [],
 
     addIdea: (text: string) => {
       const state = get();
@@ -442,16 +445,27 @@ export const useStore = create<AppState>((set, get) => {
         })),
       });
 
+      // Cancel any existing flash timers before starting new ones
+      get().tagFlashTimers.forEach((t) => clearTimeout(t));
+
       // Staggered flash animation
       const taggedIdeaIds = Object.keys(ideaTagMap);
+      const timerIds: ReturnType<typeof setTimeout>[] = [];
       taggedIdeaIds.forEach((ideaId, idx) => {
-        setTimeout(() => {
+        const outerTimer = setTimeout(() => {
           set((s) => ({ tagJustTagged: [...s.tagJustTagged, ideaId] }));
-          setTimeout(() => {
+          const innerTimer = setTimeout(() => {
             set((s) => ({ tagJustTagged: s.tagJustTagged.filter((id) => id !== ideaId) }));
+            // Clear the timer array once all flashes are done
+            if (idx === taggedIdeaIds.length - 1) {
+              set({ tagFlashTimers: [] });
+            }
           }, 600);
+          timerIds.push(innerTimer);
         }, idx * 100);
+        timerIds.push(outerTimer);
       });
+      set({ tagFlashTimers: timerIds });
     },
 
     removeAiTag: (tagId) => {

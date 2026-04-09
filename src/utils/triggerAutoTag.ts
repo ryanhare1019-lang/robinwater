@@ -11,6 +11,7 @@ export async function triggerAutoTag(): Promise<void> {
   const { config, canvases, activeCanvasId, applyAiTags, setAutoTagLoading } = state;
 
   const canvas = canvases.find((c) => c.id === activeCanvasId) || canvases[0];
+  if (!canvas) return;
 
   if (!config?.anthropicApiKey) {
     throw new Error('NO_API_KEY');
@@ -54,15 +55,15 @@ export async function triggerAutoTag(): Promise<void> {
 
     applyAiTags(tagDefinitions);
   } catch (err) {
-    setAutoTagLoading(false);
     throw err;
+  } finally {
+    setAutoTagLoading(false);
   }
-
-  setAutoTagLoading(false);
 }
 
 export function getHasAiTags(): boolean {
   const state = useStore.getState();
   const canvas = state.canvases.find((c) => c.id === state.activeCanvasId) || state.canvases[0];
+  if (!canvas) return false;
   return (canvas.aiTagDefinitions?.length ?? 0) > 0;
 }
