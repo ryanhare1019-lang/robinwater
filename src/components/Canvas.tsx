@@ -393,7 +393,7 @@ export function Canvas() {
         >
           <Background />
           <Particles />
-          <SimilarityLines />
+          <SimilarityLines hiddenIds={hiddenIds} />
           <ConnectionLines hiddenIds={hiddenIds} />
           {ideas.map((idea) => (
             <IdeaNode

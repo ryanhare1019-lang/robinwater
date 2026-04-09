@@ -1,7 +1,11 @@
 import { useRef, useEffect } from "react";
 import { useStore } from "../store/useStore";
 
-export function SimilarityLines() {
+interface SimilarityLinesProps {
+  hiddenIds?: Set<string>;
+}
+
+export function SimilarityLines({ hiddenIds }: SimilarityLinesProps) {
   const lines = useStore((s) => s.similarityLines);
   const ideas = useStore((s) => {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
@@ -48,6 +52,8 @@ export function SimilarityLines() {
         const from = ideasById.get(line.fromId);
         const to = ideasById.get(line.toId);
         if (!from || !to) return null;
+        // Skip lines to/from hidden ideas
+        if (hiddenIds?.has(line.fromId) || hiddenIds?.has(line.toId)) return null;
         const isTagLine = line.reason === 'tag';
         return (
           <line
