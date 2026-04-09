@@ -59,6 +59,8 @@ export async function triggerSuggest(
 
     // Get fresh state for viewport (may have changed during API call)
     const freshState = useStore.getState();
+    // If user switched canvas while suggestions were loading, discard results
+    if (freshState.activeCanvasId !== activeCanvasId) return;
     const freshCanvas = freshState.canvases.find((c) => c.id === freshState.activeCanvasId);
     const viewport = freshCanvas?.viewport || { x: 0, y: 0, zoom: 1 };
     const freshIdeas = freshCanvas?.ideas || ideas;
