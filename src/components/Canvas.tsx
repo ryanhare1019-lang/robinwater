@@ -28,7 +28,56 @@ export function Canvas() {
   const aiPanelOpen = useStore((s) => s.aiPanelOpen);
   const canvas = canvases.find((c) => c.id === activeCanvasId);
   const ideas = canvas?.ideas || [];
+  const connections = canvas?.connections || [];
   const viewport = canvas?.viewport || { x: 0, y: 0, zoom: 1 };
+
+  // --- Cluster collapse logic ---
+  // Build adjacency map
+  const adj = new Map<string, Set<string>>();
+  for (const idea of ideas) adj.set(idea.id, new Set());
+  for (const conn of connections) {
+    adj.get(conn.sourceId)?.add(conn.targetId);
+    adj.get(conn.targetId)?.add(conn.sourceId);
+  }
+
+  // Find connected components via BFS
+  const visited = new Set<string>();
+  const components: string[][] = [];
+  for (const idea of ideas) {
+    if (visited.has(idea.id)) continue;
+    const component: string[] = [];
+    const queue = [idea.id];
+    visited.add(idea.id);
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      component.push(curr);
+      for (const neighbor of adj.get(curr) ?? []) {
+        if (!visited.has(neighbor)) { visited.add(neighbor); queue.push(neighbor); }
+      }
+    }
+    components.push(component);
+  }
+
+  // Find hub of each cluster (most connections in the component)
+  const hubIds = new Set<string>();
+  for (const comp of components) {
+    if (comp.length < 2) continue;
+    const hub = comp.reduce((best, id) =>
+      (adj.get(id)?.size ?? 0) > (adj.get(best)?.size ?? 0) ? id : best
+    );
+    hubIds.add(hub);
+  }
+
+  // Compute hidden ideas (all non-hub members of collapsed hub clusters)
+  const collapsedHubs = canvas?.collapsedHubs || [];
+  const hiddenIds = new Set<string>();
+  for (const hubId of collapsedHubs) {
+    const comp = components.find((c) => c.includes(hubId));
+    if (!comp) continue;
+    for (const id of comp) {
+      if (id !== hubId) hiddenIds.add(id);
+    }
+  }
 
   // Refs for direct DOM manipulation — avoids React re-renders during pan/zoom
   const transformRef = useRef<HTMLDivElement>(null);
@@ -345,9 +394,19 @@ export function Canvas() {
           <Background />
           <Particles />
           <SimilarityLines />
-          <ConnectionLines />
+          <ConnectionLines hiddenIds={hiddenIds} />
           {ideas.map((idea) => (
-            <IdeaNode key={idea.id} idea={idea} />
+            <IdeaNode
+              key={idea.id}
+              idea={idea}
+              isHidden={hiddenIds.has(idea.id)}
+              isHub={hubIds.has(idea.id)}
+              collapsedCount={
+                collapsedHubs.includes(idea.id)
+                  ? (components.find((c) => c.includes(idea.id))?.length ?? 1) - 1
+                  : 0
+              }
+            />
           ))}
           {aiPanelOpen && ghostNodes.map((ghost) => (
             <GhostNodeCard key={ghost.id} ghost={ghost} />

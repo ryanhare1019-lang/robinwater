@@ -173,6 +173,9 @@ interface AppState {
   // Undo / redo
   undo: () => void;
   redo: () => void;
+
+  // Cluster collapse
+  toggleClusterCollapse: (hubId: string) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -763,6 +766,23 @@ export const useStore = create<AppState>((set, get) => {
         similarityLines: computeSimilarityLines(entry.ideas, entry.connections),
         selectedId: null,
         selectedIds: [],
+      });
+    },
+
+    // Cluster collapse
+    toggleClusterCollapse: (hubId) => {
+      const state = get();
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => {
+          const current = c.collapsedHubs || [];
+          const isCollapsed = current.includes(hubId);
+          return {
+            ...c,
+            collapsedHubs: isCollapsed
+              ? current.filter((id) => id !== hubId)
+              : [...current, hubId],
+          };
+        }),
       });
     },
 

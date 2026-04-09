@@ -1,5 +1,9 @@
 import { useStore } from "../store/useStore";
 
+interface ConnectionLinesProps {
+  hiddenIds?: Set<string>;
+}
+
 function getCurveControlPoints(
   x1: number, y1: number, x2: number, y2: number
 ): { cpx1: number; cpy1: number; cpx2: number; cpy2: number } {
@@ -21,7 +25,7 @@ function getCurveControlPoints(
   };
 }
 
-export function ConnectionLines() {
+export function ConnectionLines({ hiddenIds }: ConnectionLinesProps) {
   const canvases = useStore((s) => s.canvases);
   const activeCanvasId = useStore((s) => s.activeCanvasId);
   const removeConnection = useStore((s) => s.removeConnection);
@@ -54,6 +58,8 @@ export function ConnectionLines() {
         const source = ideasById.get(conn.sourceId);
         const target = ideasById.get(conn.targetId);
         if (!source || !target) return null;
+        // Hide connections where either endpoint is in a collapsed cluster
+        if (hiddenIds?.has(conn.sourceId) || hiddenIds?.has(conn.targetId)) return null;
 
         const x1 = source.x + (source.width || 200) / 2;
         const y1 = source.y + 22;

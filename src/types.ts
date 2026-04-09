@@ -56,6 +56,7 @@ export interface Canvas {
   viewport: Viewport;
   tags?: CustomTag[];
   aiTagDefinitions?: AITagDefinition[];
+  collapsedHubs?: string[];
 }
 
 export interface GhostNode {

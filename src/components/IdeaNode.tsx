@@ -5,6 +5,9 @@ import { getDetailLevelWithHysteresis, type DetailLevel } from "../utils/zoom";
 
 interface Props {
   idea: Idea;
+  isHidden?: boolean;
+  isHub?: boolean;
+  collapsedCount?: number;
 }
 
 const EMPTY_TAGS: import("../types").CustomTag[] = [];
@@ -18,7 +21,7 @@ function formatDate(iso: string): string {
   return `${mm}.${dd}.${yy}`;
 }
 
-export function IdeaNode({ idea }: Props) {
+export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount = 0 }: Props) {
   const selectedId = useStore((s) => s.selectedId);
   const selectedIds = useStore((s) => s.selectedIds);
   const newNodeId = useStore((s) => s.newNodeId);
@@ -33,6 +36,7 @@ export function IdeaNode({ idea }: Props) {
   const addConnection = useStore((s) => s.addConnection);
   const setConnectingFrom = useStore((s) => s.setConnectingFrom);
   const setHoverPreview = useStore((s) => s.setHoverPreview);
+  const toggleClusterCollapse = useStore((s) => s.toggleClusterCollapse);
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canvasTags = useStore((s) => {
@@ -351,6 +355,9 @@ export function IdeaNode({ idea }: Props) {
 
   const hasDescription = Boolean(idea.description && idea.description.trim().length > 0);
 
+  // Hidden nodes (collapsed into their hub) render nothing
+  if (isHidden) return null;
+
   return (
     <div
       ref={nodeRef}
@@ -472,6 +479,33 @@ export function IdeaNode({ idea }: Props) {
         }}
       >
         <span>IDEA</span>
+        {isHub && (
+          <span
+            onMouseDown={(e) => { e.stopPropagation(); toggleClusterCollapse(idea.id); }}
+            style={{
+              cursor: "pointer",
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--label-size)",
+              textTransform: "none",
+              letterSpacing: "0.04em",
+              color: collapsedCount > 0 ? "var(--accent-blue)" : "var(--text-tertiary)",
+              border: `1px solid ${collapsedCount > 0 ? "var(--accent-blue)" : "var(--border-default)"}`,
+              padding: "0 3px",
+              lineHeight: "1.4",
+              userSelect: "none",
+              flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "var(--text-primary)"; (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"; }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget as HTMLElement;
+              el.style.color = collapsedCount > 0 ? "var(--accent-blue)" : "var(--text-tertiary)";
+              el.style.borderColor = collapsedCount > 0 ? "var(--accent-blue)" : "var(--border-default)";
+            }}
+            title={collapsedCount > 0 ? `Expand cluster (${collapsedCount} hidden)` : "Collapse cluster"}
+          >
+            {collapsedCount > 0 ? `+${collapsedCount}` : "−"}
+          </span>
+        )}
         {hasDescription && (
           <svg
             width="10"
