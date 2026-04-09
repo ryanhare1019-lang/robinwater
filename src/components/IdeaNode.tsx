@@ -1,6 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from "react";
 import { Idea } from "../types";
 import { useStore, getActiveViewport } from "../store/useStore";
+import { getDetailLevelWithHysteresis, type DetailLevel } from "../utils/zoom";
 
 interface Props {
   idea: Idea;
@@ -39,14 +40,15 @@ export function IdeaNode({ idea }: Props) {
     return canvas?.aiTagDefinitions || EMPTY_AI_TAG_DEFS;
   });
   const removeAiTagFromIdea = useStore((s) => s.removeAiTagFromIdea);
+  const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
+
   const zoom = useStore((s) => {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.viewport.zoom ?? 1;
   });
-
-  const isChipMode = zoom < 0.35;
-
-  const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
+  const detailLevelRef = useRef<DetailLevel>('full');
+  const detailLevel = getDetailLevelWithHysteresis(zoom, detailLevelRef.current);
+  detailLevelRef.current = detailLevel;
 
   const isSelected = selectedId === idea.id;
   const isNew = newNodeId === idea.id;
@@ -186,15 +188,15 @@ export function IdeaNode({ idea }: Props) {
   );
 
   const hasCustomSize = idea.width !== undefined || idea.height !== undefined;
-  const nodeWidth = idea.width || undefined;
-  const nodeHeight = idea.height || undefined;
 
-  const showFullText = hasCustomSize;
-  const displayText = showFullText
-    ? idea.text
-    : idea.text.length > 120
-    ? idea.text.slice(0, 120) + "\u2026"
-    : idea.text;
+  const contentText =
+    detailLevel === 'minimal'
+      ? (idea.text.length > 25 ? idea.text.slice(0, 25) + '…' : idea.text)
+      : hasCustomSize
+      ? idea.text
+      : idea.text.length > 120
+      ? idea.text.slice(0, 120) + '\u2026'
+      : idea.text;
 
   const ideaTags = (idea.tags || [])
     .map((id) => canvasTags.find((t) => t.id === id))
@@ -236,10 +238,12 @@ export function IdeaNode({ idea }: Props) {
         position: "absolute",
         left: idea.x,
         top: idea.y,
-        width: nodeWidth,
-        height: isChipMode ? undefined : nodeHeight,
-        minWidth: 200,
-        maxWidth: hasCustomSize ? undefined : 340,
+        width: idea.width || undefined,
+        height: idea.height || undefined,
+        minWidth: detailLevel === 'full' ? 200 : detailLevel === 'compact' ? 140 : 100,
+        maxWidth: (idea.width !== undefined || idea.height !== undefined)
+          ? undefined
+          : detailLevel === 'full' ? 340 : detailLevel === 'compact' ? 280 : 200,
         background: "var(--bg-surface)",
         border: `1px solid ${borderColor}`,
         borderLeft: isSelected
@@ -265,7 +269,7 @@ export function IdeaNode({ idea }: Props) {
           ? "transform 0.25s ease-in, opacity 0.25s ease-in"
           : isDragging
           ? "transform 0.15s ease"
-          : "border-color 0.2s ease, transform 0.15s var(--ease-out), opacity 0.15s ease",
+          : "border-color 0.2s ease, transform 0.15s var(--ease-out), opacity 0.15s ease, min-width 0.15s ease, max-width 0.15s ease",
         animation: entering
           ? "node-enter 0.45s var(--ease-spring) forwards, creation-glow 2.5s ease-out forwards"
           : undefined,
@@ -273,25 +277,6 @@ export function IdeaNode({ idea }: Props) {
         zIndex: isDragging ? 100 : isSelected ? 10 : 1,
       }}
     >
-      {/* CHIP MODE — compact 2-line preview when zoomed out */}
-      {isChipMode && (
-        <div
-          style={{
-            padding: "6px 10px",
-            fontSize: "var(--body-size)",
-            lineHeight: 1.4,
-            color: "var(--text-primary)",
-            overflow: "hidden",
-            display: "-webkit-box",
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: "vertical",
-            animation: "chip-enter 0.2s ease forwards",
-          }}
-        >
-          {idea.text}
-        </div>
-      )}
-
       {/* Tag color bar — splits vertically per tag */}
       {ideaTags.length > 0 && (
         <div
@@ -319,8 +304,8 @@ export function IdeaNode({ idea }: Props) {
         </div>
       )}
 
-      {/* Label row: IDEA + description indicator + date */}
-      {!isChipMode && <div
+      {/* Label row — full level only */}
+      <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -331,35 +316,42 @@ export function IdeaNode({ idea }: Props) {
           letterSpacing: "0.1em",
           color: "var(--text-tertiary)",
           fontWeight: 400,
+          maxHeight: detailLevel === 'full' ? '40px' : '0px',
+          opacity: detailLevel === 'full' ? 1 : 0,
+          overflow: "hidden",
+          transition: "max-height 0.15s ease, opacity 0.12s ease",
         }}
       >
         <span>IDEA</span>
         {hasDescription && (
-          <span
-            style={{
-              color: "var(--text-secondary)",
-              fontSize: "10px",
-              opacity: 0.5,
-              lineHeight: 1,
-            }}
-          >
-            ·
-          </span>
+          <span style={{ color: "var(--text-secondary)", fontSize: "10px", opacity: 0.5, lineHeight: 1 }}>·</span>
         )}
         <span>{formatDate(idea.createdAt)}</span>
-      </div>}
+      </div>
 
-      {/* Separator */}
-      {!isChipMode && <div style={{ height: 1, background: "var(--border-subtle)" }} />}
+      {/* Separator — full level only */}
+      <div
+        style={{
+          maxHeight: detailLevel === 'full' ? '1px' : '0px',
+          opacity: detailLevel === 'full' ? 1 : 0,
+          overflow: "hidden",
+          background: "var(--border-subtle)",
+          transition: "max-height 0.15s ease, opacity 0.12s ease",
+        }}
+      />
 
-      {/* AI Tags */}
-      {!isChipMode && ideaAiTags.length > 0 && (
+      {/* AI Tags — full level only */}
+      {ideaAiTags.length > 0 && (
         <div
           style={{
             padding: "4px 14px 8px",
             display: "flex",
             flexWrap: "wrap",
             gap: "4px",
+            maxHeight: detailLevel === 'full' ? '120px' : '0px',
+            opacity: detailLevel === 'full' ? 1 : 0,
+            overflow: "hidden",
+            transition: "max-height 0.15s ease, opacity 0.12s ease",
           }}
         >
           {ideaAiTags.map((tagDef) => (
@@ -383,16 +375,8 @@ export function IdeaNode({ idea }: Props) {
               {tagDef.label}
               {isHovered && (
                 <span
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    removeAiTagFromIdea(tagDef.id, idea.id);
-                  }}
-                  style={{
-                    cursor: "pointer",
-                    opacity: 0.5,
-                    lineHeight: 1,
-                    fontSize: "10px",
-                  }}
+                  onMouseDown={(e) => { e.stopPropagation(); removeAiTagFromIdea(tagDef.id, idea.id); }}
+                  style={{ cursor: "pointer", opacity: 0.5, lineHeight: 1, fontSize: "10px" }}
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
                 >
@@ -405,22 +389,25 @@ export function IdeaNode({ idea }: Props) {
       )}
 
       {/* Content */}
-      {!isChipMode && (
-        <div
-          style={{
-            padding: "8px 14px 12px",
-            whiteSpace: hasCustomSize ? "normal" : undefined,
-            display: hasCustomSize ? undefined : "-webkit-box",
-            WebkitLineClamp: hasCustomSize ? undefined : 4,
-            WebkitBoxOrient: hasCustomSize ? undefined : "vertical",
-            overflow: "hidden",
-            textOverflow: hasCustomSize ? undefined : "ellipsis",
-            wordBreak: "break-word",
-          }}
-        >
-          {displayText}
-        </div>
-      )}
+      <div
+        style={{
+          padding: detailLevel === 'full'
+            ? "8px 14px 12px"
+            : detailLevel === 'compact'
+            ? "8px 12px"
+            : "6px 10px",
+          whiteSpace: detailLevel === 'minimal' ? 'nowrap' : hasCustomSize ? 'normal' : undefined,
+          display: detailLevel === 'minimal' ? 'block' : hasCustomSize ? undefined : '-webkit-box',
+          WebkitLineClamp: detailLevel === 'compact' ? 2 : hasCustomSize ? undefined : 4,
+          WebkitBoxOrient: detailLevel === 'minimal' || hasCustomSize ? undefined : 'vertical',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          wordBreak: detailLevel === 'minimal' ? undefined : 'break-word',
+          transition: "padding 0.15s ease",
+        }}
+      >
+        {contentText}
+      </div>
 
       {/* Plop ripple — square for grid aesthetic */}
       {entering && (
@@ -440,7 +427,7 @@ export function IdeaNode({ idea }: Props) {
       )}
 
       {/* Resize handle */}
-      {(isSelected || isDragging) && !isDeleting && (
+      {(isSelected || isDragging) && !isDeleting && detailLevel === 'full' && (
         <div
           onMouseDown={onResizeDown}
           style={{
