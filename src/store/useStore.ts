@@ -66,6 +66,10 @@ interface AppState {
   // Delete animation
   setDeletingNodeId: (id: string | null) => void;
 
+  // Hover preview
+  hoverPreview: { nodeId: string; rect: { left: number; top: number; right: number; bottom: number } } | null;
+  setHoverPreview: (state: { nodeId: string; rect: { left: number; top: number; right: number; bottom: number } } | null) => void;
+
   // Tag management
   addTag: (name: string, color: string) => void;
   removeTag: (id: string) => void;
@@ -135,6 +139,7 @@ export const useStore = create<AppState>((set, get) => {
     contextMenuNodeId: null,
     contextMenuPos: null,
     deletingNodeId: null,
+    hoverPreview: null,
     ghostNodes: [],
     isSuggestLoading: false,
     isQuestionsLoading: false,
@@ -382,6 +387,8 @@ export const useStore = create<AppState>((set, get) => {
     setContextMenu: (nodeId, pos) => set({ contextMenuNodeId: nodeId, contextMenuPos: pos }),
 
     setDeletingNodeId: (id) => set({ deletingNodeId: id }),
+
+    setHoverPreview: (state) => set({ hoverPreview: state }),
 
     // Config
     setConfig: (config) => set({ config }),
