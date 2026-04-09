@@ -129,6 +129,11 @@ input:focus::placeholder {
   100% { opacity: 0.4; }
 }
 
+@keyframes ai-btn-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
 /* ── Sidebar Animations ── */
 
 @keyframes slide-in-right {

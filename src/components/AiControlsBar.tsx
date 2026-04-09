@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { triggerSuggest } from "../utils/triggerSuggest";
 import { triggerAutoTag, getHasAiTags } from "../utils/triggerAutoTag";
@@ -37,6 +37,24 @@ export function AiControlsBar() {
   // Re-tag warning state
   const [reTagPending, setReTagPending] = useState(false);
   const reTagTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  // Issue 2: cleanup reTagTimer on unmount
+  useEffect(() => {
+    return () => {
+      if (reTagTimer.current) clearTimeout(reTagTimer.current);
+    };
+  }, []);
+
+  // Issue 3: force re-render when SUGGEST cooldown expires
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (suggestCooldownUntil > Date.now()) {
+      const remaining = suggestCooldownUntil - Date.now();
+      const t = setTimeout(() => setTick(n => n + 1), remaining + 50);
+      return () => clearTimeout(t);
+    }
+  }, [suggestCooldownUntil]);
 
   const anyLoading = isSuggestLoading || isAutoTagLoading || isQuestionsLoading;
 
@@ -183,49 +201,41 @@ export function AiControlsBar() {
   const autoTagNormalText = reTagPending ? "◈ RE-TAG? (CLICK AGAIN)" : "◈ AUTO-TAG";
 
   return (
-    <>
-      <style>{`
-        @keyframes ai-btn-pulse {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.8; }
-        }
-      `}</style>
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          gap: 6,
-          alignItems: "center",
-        }}
-      >
-        {renderButton({
-          show: showSuggest,
-          loading: isSuggestLoading,
-          loadingText: "✦ THINKING...",
-          normalText: "✦ SUGGEST",
-          error: suggestError,
-          disabled: anyLoading || isSuggestOnCooldown,
-          onClick: handleSuggest,
-        })}
-        {renderButton({
-          show: showAutoTag,
-          loading: isAutoTagLoading,
-          loadingText: "◈ ANALYZING...",
-          normalText: autoTagNormalText,
-          error: autoTagError,
-          disabled: anyLoading,
-          onClick: handleAutoTag,
-        })}
-        {renderButton({
-          show: showQuestions,
-          loading: isQuestionsLoading,
-          loadingText: "? THINKING...",
-          normalText: "? QUESTIONS",
-          error: questionsError,
-          disabled: anyLoading,
-          onClick: handleQuestions,
-        })}
-      </div>
-    </>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        gap: 4,
+        alignItems: "center",
+      }}
+    >
+      {renderButton({
+        show: showSuggest,
+        loading: isSuggestLoading,
+        loadingText: "✦ THINKING...",
+        normalText: "✦ SUGGEST",
+        error: suggestError,
+        disabled: anyLoading || isSuggestOnCooldown,
+        onClick: handleSuggest,
+      })}
+      {renderButton({
+        show: showAutoTag,
+        loading: isAutoTagLoading,
+        loadingText: "◈ ANALYZING...",
+        normalText: autoTagNormalText,
+        error: autoTagError,
+        disabled: anyLoading,
+        onClick: handleAutoTag,
+      })}
+      {renderButton({
+        show: showQuestions,
+        loading: isQuestionsLoading,
+        loadingText: "? THINKING...",
+        normalText: "? QUESTIONS",
+        error: questionsError,
+        disabled: anyLoading,
+        onClick: handleQuestions,
+      })}
+    </div>
   );
 }
