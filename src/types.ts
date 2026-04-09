@@ -49,6 +49,16 @@ export interface Canvas {
   tags?: CustomTag[];
 }
 
+export interface GhostNode {
+  id: string;
+  text: string;
+  relatedToId: string | null; // id of the idea it relates to
+  reasoning: string;          // shown as tooltip
+  x: number;
+  y: number;
+  type: 'suggestion' | 'question'; // 'suggestion' for this task
+}
+
 // New multi-canvas save format
 export interface AppData {
   canvases: Canvas[];

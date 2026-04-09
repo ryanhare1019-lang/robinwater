@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from "react";
 import { useStore } from "../store/useStore";
 import { IdeaNode } from "./IdeaNode";
+import { GhostNodeCard } from "./GhostNodeCard";
 import { SimilarityLines } from "./SimilarityLines";
 import { ConnectionLines } from "./ConnectionLines";
 import { Background } from "./Background";
@@ -21,6 +22,7 @@ export function Canvas() {
   const deleteIdea = useStore((s) => s.deleteIdea);
   const setDeletingNodeId = useStore((s) => s.setDeletingNodeId);
 
+  const ghostNodes = useStore((s) => s.ghostNodes);
   const canvas = canvases.find((c) => c.id === activeCanvasId);
   const ideas = canvas?.ideas || [];
   const viewport = canvas?.viewport || { x: 0, y: 0, zoom: 1 };
@@ -238,6 +240,9 @@ export function Canvas() {
           <ConnectionLines />
           {ideas.map((idea) => (
             <IdeaNode key={idea.id} idea={idea} />
+          ))}
+          {ghostNodes.map((ghost) => (
+            <GhostNodeCard key={ghost.id} ghost={ghost} />
           ))}
         </div>
       </div>

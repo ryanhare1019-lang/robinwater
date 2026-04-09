@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, CustomTag } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode } from "../types";
 import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
@@ -72,6 +72,19 @@ interface AppState {
   config: AppConfig | null;
   setConfig: (config: AppConfig) => void;
   reloadConfig: () => Promise<void>;
+
+  // Ghost nodes
+  ghostNodes: GhostNode[];
+  isSuggestLoading: boolean;
+  addGhostNodes: (nodes: GhostNode[]) => void;
+  acceptGhostNode: (id: string) => void;
+  dismissGhostNode: (id: string) => void;
+  setSuggestLoading: (v: boolean) => void;
+
+  // Auto-trigger timing
+  lastAddedAt: number;
+  lastAutoTriggerAt: number;
+  setLastAutoTriggerAt: (t: number) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -101,6 +114,10 @@ export const useStore = create<AppState>((set, get) => {
     contextMenuNodeId: null,
     contextMenuPos: null,
     deletingNodeId: null,
+    ghostNodes: [],
+    isSuggestLoading: false,
+    lastAddedAt: 0,
+    lastAutoTriggerAt: 0,
 
     addIdea: (text: string) => {
       const state = get();
@@ -122,6 +139,7 @@ export const useStore = create<AppState>((set, get) => {
         })),
         newNodeId: idea.id,
         similarityLines: computeSimilarityLines(ideas),
+        lastAddedAt: Date.now(),
       });
     },
 
@@ -178,6 +196,7 @@ export const useStore = create<AppState>((set, get) => {
         })),
         newNodeId: idea.id,
         similarityLines: computeSimilarityLines(ideas),
+        lastAddedAt: Date.now(),
       });
     },
 
@@ -269,6 +288,7 @@ export const useStore = create<AppState>((set, get) => {
           newNodeId: null,
           connectingFrom: null,
           similarityLines: computeSimilarityLines(canvas.ideas),
+          ghostNodes: [],
         });
       }
     },
@@ -339,6 +359,51 @@ export const useStore = create<AppState>((set, get) => {
       const config = await loadConfig();
       set({ config });
     },
+
+    // Ghost nodes
+    addGhostNodes: (nodes) => set((state) => ({ ghostNodes: [...state.ghostNodes, ...nodes] })),
+
+    acceptGhostNode: (id) => {
+      const state = get();
+      const ghost = state.ghostNodes.find((g) => g.id === id);
+      if (!ghost) return;
+
+      const canvas = getActiveCanvas(state);
+      const keywords = ([] as string[]); // ghost nodes don't need keywords extracted here
+      const idea: Idea = {
+        id: generateId(),
+        text: ghost.text,
+        description: "",
+        x: ghost.x,
+        y: ghost.y,
+        createdAt: new Date().toISOString(),
+        keywords,
+      };
+
+      let connections = canvas.connections;
+      if (ghost.relatedToId && canvas.ideas.some((i) => i.id === ghost.relatedToId)) {
+        const conn: Connection = { id: generateId(), sourceId: ghost.relatedToId!, targetId: idea.id };
+        connections = [...connections, conn];
+      }
+
+      const ideas = [...canvas.ideas, idea];
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c, ideas, connections,
+        })),
+        ghostNodes: state.ghostNodes.filter((g) => g.id !== id),
+        newNodeId: idea.id,
+        similarityLines: computeSimilarityLines(ideas),
+      });
+    },
+
+    dismissGhostNode: (id) => set((state) => ({
+      ghostNodes: state.ghostNodes.filter((g) => g.id !== id),
+    })),
+
+    setSuggestLoading: (v) => set({ isSuggestLoading: v }),
+
+    setLastAutoTriggerAt: (t) => set({ lastAutoTriggerAt: t }),
 
     // Tag management
     addTag: (name, color) => {

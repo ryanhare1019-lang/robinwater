@@ -8,6 +8,7 @@ import { ConnectingLine } from "./components/ConnectingLine";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
 import { loadConfig } from "./utils/config";
+import { triggerSuggest } from "./utils/triggerSuggest";
 
 const DATA_FILE = "robinwater-data.json";
 
@@ -77,9 +78,15 @@ async function saveData(data: AppData): Promise<void> {
   }
 }
 
+const AUTO_TRIGGER_DELAY_MS = 3_000;
+
 export function App() {
   const selectedId = useStore((s) => s.selectedId);
+  const lastAddedAt = useStore((s) => s.lastAddedAt);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
+  const autoTriggerTimer = useRef<ReturnType<typeof setTimeout>>();
+  // Track the newest idea text for auto-trigger
+  const newestIdeaTextRef = useRef<string>('');
 
   useEffect(() => {
     loadData().then((data) => {
@@ -104,6 +111,32 @@ export function App() {
       if (saveTimer.current) clearTimeout(saveTimer.current);
     };
   }, []);
+
+  // Auto-trigger ghost suggestions 3s after a new idea is added
+  useEffect(() => {
+    if (lastAddedAt === 0) return;
+
+    const config = useStore.getState().config;
+    if (!config?.aiFeatures.ghostNodes) return;
+    if (!config?.anthropicApiKey) return;
+
+    // Capture the newest idea text at the moment of trigger
+    const state = useStore.getState();
+    const canvas = state.canvases.find((c) => c.id === state.activeCanvasId);
+    const ideas = canvas?.ideas || [];
+    if (ideas.length > 0) {
+      newestIdeaTextRef.current = ideas[ideas.length - 1].text;
+    }
+
+    if (autoTriggerTimer.current) clearTimeout(autoTriggerTimer.current);
+    autoTriggerTimer.current = setTimeout(() => {
+      triggerSuggest('auto', newestIdeaTextRef.current);
+    }, AUTO_TRIGGER_DELAY_MS);
+
+    return () => {
+      if (autoTriggerTimer.current) clearTimeout(autoTriggerTimer.current);
+    };
+  }, [lastAddedAt]);
 
   return (
     <>
