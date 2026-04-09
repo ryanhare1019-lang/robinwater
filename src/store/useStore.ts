@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { Idea, Viewport, AppData, Canvas, Connection, CustomTag } from "../types";
+import { AppConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
@@ -66,6 +67,10 @@ interface AppState {
   // Tag management
   addTag: (name: string, color: string) => void;
   removeTag: (id: string) => void;
+
+  // Config
+  config: AppConfig | null;
+  setConfig: (config: AppConfig) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -86,6 +91,7 @@ export const useStore = create<AppState>((set, get) => {
   return {
     canvases: [defaultCanvas],
     activeCanvasId: defaultCanvas.id,
+    config: null,
     selectedId: null,
     newNodeId: null,
     similarityLines: [],
@@ -325,6 +331,9 @@ export const useStore = create<AppState>((set, get) => {
     setContextMenu: (nodeId, pos) => set({ contextMenuNodeId: nodeId, contextMenuPos: pos }),
 
     setDeletingNodeId: (id) => set({ deletingNodeId: id }),
+
+    // Config
+    setConfig: (config) => set({ config }),
 
     // Tag management
     addTag: (name, color) => {

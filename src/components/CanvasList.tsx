@@ -3,6 +3,8 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useStore } from "../store/useStore";
 import { buildDefaultFilename, buildExportText } from "../utils/export";
+import { SettingsModal } from "./SettingsModal";
+import { loadConfig } from "../utils/config";
 
 const menuItemStyle: React.CSSProperties = {
   display: "block",
@@ -30,12 +32,15 @@ export function CanvasList() {
   const addCanvas = useStore((s) => s.addCanvas);
   const renameCanvas = useStore((s) => s.renameCanvas);
   const deleteCanvas = useStore((s) => s.deleteCanvas);
+  const config = useStore((s) => s.config);
+  const setConfig = useStore((s) => s.setConfig);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [ctxMenu, setCtxMenu] = useState<{ canvasId: string; x: number; y: number } | null>(null);
   const [exportedId, setExportedId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const deleteTimer = useRef<ReturnType<typeof setTimeout>>();
   const exportTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -395,6 +400,38 @@ export function CanvasList() {
               + NEW CANVAS
             </button>
           </div>
+
+          {/* Settings button */}
+          <div style={{ padding: "8px 16px 14px", borderTop: "1px solid var(--border-subtle)" }}>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              style={{
+                background: "#080808",
+                border: "1px solid #1A1A1A",
+                borderRadius: 0,
+                color: "#444444",
+                fontSize: 11,
+                fontFamily: "var(--font-mono)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                cursor: "pointer",
+                padding: "6px 10px",
+                width: "100%",
+                textAlign: "left",
+                transition: "border-color 0.1s ease, color 0.1s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = "#333333";
+                e.currentTarget.style.color = "#666666";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = "#1A1A1A";
+                e.currentTarget.style.color = "#444444";
+              }}
+            >
+              ⚙ SETTINGS
+            </button>
+          </div>
         </div>
       )}
 
@@ -423,6 +460,18 @@ export function CanvasList() {
             ↗ EXPORT
           </button>
         </div>
+      )}
+
+      {/* Settings modal */}
+      {settingsOpen && config && (
+        <SettingsModal
+          initialConfig={config}
+          onClose={() => {
+            setSettingsOpen(false);
+            // Reload config into store after potential save
+            loadConfig().then(setConfig);
+          }}
+        />
       )}
     </>
   );

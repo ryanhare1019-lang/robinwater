@@ -7,6 +7,7 @@ import { ContextMenu } from "./components/ContextMenu";
 import { ConnectingLine } from "./components/ConnectingLine";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
+import { loadConfig } from "./utils/config";
 
 const DATA_FILE = "robinwater-data.json";
 
@@ -85,6 +86,9 @@ export function App() {
       if (data) {
         useStore.getState().hydrate(data);
       }
+    });
+    loadConfig().then((config) => {
+      useStore.getState().setConfig(config);
     });
   }, []);
 
