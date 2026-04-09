@@ -4,6 +4,7 @@ import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
+import { getTagColor } from "../utils/aiTags";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -473,7 +474,7 @@ export const useStore = create<AppState>((set, get) => {
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
           ...c,
           aiTagDefinitions: (c.aiTagDefinitions || []).map((t) =>
-            t.id === tagId ? { ...t, label: newLabel } : t
+            t.id === tagId ? { ...t, label: newLabel, color: getTagColor(newLabel) } : t
           ),
         })),
       });

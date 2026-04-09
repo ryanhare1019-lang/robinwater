@@ -326,22 +326,6 @@ export function IdeaNode({ idea }: Props) {
       {/* Separator */}
       <div style={{ height: 1, background: "var(--border-subtle)" }} />
 
-      {/* Content */}
-      <div
-        style={{
-          padding: "8px 14px 12px",
-          whiteSpace: hasCustomSize ? "normal" : undefined,
-          display: hasCustomSize ? undefined : "-webkit-box",
-          WebkitLineClamp: hasCustomSize ? undefined : 4,
-          WebkitBoxOrient: hasCustomSize ? undefined : "vertical",
-          overflow: "hidden",
-          textOverflow: hasCustomSize ? undefined : "ellipsis",
-          wordBreak: "break-word",
-        }}
-      >
-        {displayText}
-      </div>
-
       {/* AI Tags */}
       {ideaAiTags.length > 0 && (
         <div
@@ -349,7 +333,7 @@ export function IdeaNode({ idea }: Props) {
             padding: "4px 14px 8px",
             display: "flex",
             flexWrap: "wrap",
-            gap: "2px",
+            gap: "4px",
           }}
         >
           {ideaAiTags.map((tagDef) => (
@@ -373,6 +357,22 @@ export function IdeaNode({ idea }: Props) {
           ))}
         </div>
       )}
+
+      {/* Content */}
+      <div
+        style={{
+          padding: "8px 14px 12px",
+          whiteSpace: hasCustomSize ? "normal" : undefined,
+          display: hasCustomSize ? undefined : "-webkit-box",
+          WebkitLineClamp: hasCustomSize ? undefined : 4,
+          WebkitBoxOrient: hasCustomSize ? undefined : "vertical",
+          overflow: "hidden",
+          textOverflow: hasCustomSize ? undefined : "ellipsis",
+          wordBreak: "break-word",
+        }}
+      >
+        {displayText}
+      </div>
 
       {/* Plop ripple — square for grid aesthetic */}
       {entering && (
