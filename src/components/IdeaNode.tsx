@@ -7,6 +7,7 @@ interface Props {
 }
 
 const EMPTY_TAGS: import("../types").CustomTag[] = [];
+const EMPTY_AI_TAG_DEFS: import("../types").AITagDefinition[] = [];
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
@@ -32,6 +33,13 @@ export function IdeaNode({ idea }: Props) {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.tags || EMPTY_TAGS;
   });
+
+  const canvasAiTagDefs = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.aiTagDefinitions || EMPTY_AI_TAG_DEFS;
+  });
+
+  const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
 
   const isSelected = selectedId === idea.id;
   const isNew = newNodeId === idea.id;
@@ -181,8 +189,22 @@ export function IdeaNode({ idea }: Props) {
     ? idea.text.slice(0, 120) + "\u2026"
     : idea.text;
 
-  // Border logic
-  const borderColor = entering
+  const ideaTags = (idea.tags || [])
+    .map((id) => canvasTags.find((t) => t.id === id))
+    .filter((t): t is NonNullable<typeof t> => t !== undefined);
+
+  const ideaAiTags = (idea.aiTags || [])
+    .map((id) => canvasAiTagDefs.find((t) => t.id === id))
+    .filter((t): t is NonNullable<typeof t> => t !== undefined);
+
+  // Border logic — flash uses first AI tag color if available
+  const flashColor = isFlashing && ideaAiTags.length > 0
+    ? ideaAiTags[0].color
+    : undefined;
+
+  const borderColor = isFlashing && flashColor
+    ? flashColor
+    : entering
     ? "var(--border-strong)"
     : isSelected
     ? "var(--border-focus)"
@@ -191,10 +213,6 @@ export function IdeaNode({ idea }: Props) {
     : isHovered
     ? "var(--border-strong)"
     : "var(--border-default)";
-
-  const ideaTags = (idea.tags || [])
-    .map((id) => canvasTags.find((t) => t.id === id))
-    .filter((t): t is NonNullable<typeof t> => t !== undefined);
 
   const hasDescription = Boolean(idea.description && idea.description.trim().length > 0);
 
@@ -323,6 +341,38 @@ export function IdeaNode({ idea }: Props) {
       >
         {displayText}
       </div>
+
+      {/* AI Tags */}
+      {ideaAiTags.length > 0 && (
+        <div
+          style={{
+            padding: "4px 14px 8px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "2px",
+          }}
+        >
+          {ideaAiTags.map((tagDef) => (
+            <span
+              key={tagDef.id}
+              style={{
+                fontSize: "9px",
+                fontFamily: "monospace",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                padding: "2px 6px",
+                border: `1px solid ${tagDef.color}40`,
+                background: `${tagDef.color}1F`,
+                color: `${tagDef.color}B3`,
+                borderRadius: 0,
+                display: "inline-block",
+              }}
+            >
+              {tagDef.label}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Plop ripple — square for grid aesthetic */}
       {entering && (

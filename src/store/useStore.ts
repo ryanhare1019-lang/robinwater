@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition } from "../types";
 import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
@@ -85,6 +85,14 @@ interface AppState {
   lastAddedAt: number;
   lastAutoTriggerAt: number;
   setLastAutoTriggerAt: (t: number) => void;
+
+  // AI Tagging
+  isAutoTagLoading: boolean;
+  tagJustTagged: string[];
+  applyAiTags: (tagDefinitions: AITagDefinition[]) => void;
+  removeAiTag: (tagId: string) => void;
+  renameAiTag: (tagId: string, newLabel: string) => void;
+  setAutoTagLoading: (v: boolean) => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -118,6 +126,8 @@ export const useStore = create<AppState>((set, get) => {
     isSuggestLoading: false,
     lastAddedAt: 0,
     lastAutoTriggerAt: 0,
+    isAutoTagLoading: false,
+    tagJustTagged: [],
 
     addIdea: (text: string) => {
       const state = get();
@@ -405,6 +415,69 @@ export const useStore = create<AppState>((set, get) => {
     setSuggestLoading: (v) => set({ isSuggestLoading: v }),
 
     setLastAutoTriggerAt: (t) => set({ lastAutoTriggerAt: t }),
+
+    // AI Tagging
+    setAutoTagLoading: (v) => set({ isAutoTagLoading: v }),
+
+    applyAiTags: (tagDefinitions) => {
+      const state = get();
+      // Build a lookup: ideaId -> array of tag ids
+      const ideaTagMap: Record<string, string[]> = {};
+      for (const tag of tagDefinitions) {
+        for (const ideaId of tag.ideaIds) {
+          if (!ideaTagMap[ideaId]) ideaTagMap[ideaId] = [];
+          ideaTagMap[ideaId].push(tag.id);
+        }
+      }
+
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c,
+          aiTagDefinitions: tagDefinitions,
+          ideas: c.ideas.map((idea) => ({
+            ...idea,
+            aiTags: ideaTagMap[idea.id] || [],
+          })),
+        })),
+      });
+
+      // Staggered flash animation
+      const taggedIdeaIds = Object.keys(ideaTagMap);
+      taggedIdeaIds.forEach((ideaId, idx) => {
+        setTimeout(() => {
+          set((s) => ({ tagJustTagged: [...s.tagJustTagged, ideaId] }));
+          setTimeout(() => {
+            set((s) => ({ tagJustTagged: s.tagJustTagged.filter((id) => id !== ideaId) }));
+          }, 600);
+        }, idx * 100);
+      });
+    },
+
+    removeAiTag: (tagId) => {
+      const state = get();
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c,
+          aiTagDefinitions: (c.aiTagDefinitions || []).filter((t) => t.id !== tagId),
+          ideas: c.ideas.map((idea) => ({
+            ...idea,
+            aiTags: idea.aiTags?.filter((id) => id !== tagId),
+          })),
+        })),
+      });
+    },
+
+    renameAiTag: (tagId, newLabel) => {
+      const state = get();
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c,
+          aiTagDefinitions: (c.aiTagDefinitions || []).map((t) =>
+            t.id === tagId ? { ...t, label: newLabel } : t
+          ),
+        })),
+      });
+    },
 
     // Tag management
     addTag: (name, color) => {

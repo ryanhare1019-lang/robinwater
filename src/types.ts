@@ -15,6 +15,13 @@ export interface CustomTag {
   color: string; // hex color string like "#ff6b6b"
 }
 
+export interface AITagDefinition {
+  id: string;
+  label: string;       // e.g., "MONETIZATION STRATEGY"
+  color: string;       // auto-generated hex color from AI_TAG_PALETTE
+  ideaIds: string[];   // which ideas have this tag
+}
+
 export interface Idea {
   id: string;
   text: string;
@@ -26,6 +33,7 @@ export interface Idea {
   createdAt: string;
   keywords: string[];
   tags?: string[]; // array of CustomTag IDs
+  aiTags?: string[]; // array of AITagDefinition IDs
 }
 
 export interface Connection {
@@ -47,6 +55,7 @@ export interface Canvas {
   connections: Connection[];
   viewport: Viewport;
   tags?: CustomTag[];
+  aiTagDefinitions?: AITagDefinition[];
 }
 
 export interface GhostNode {
