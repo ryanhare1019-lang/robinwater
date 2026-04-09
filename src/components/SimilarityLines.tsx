@@ -3,6 +3,10 @@ import { useStore } from "../store/useStore";
 
 export function SimilarityLines() {
   const lines = useStore((s) => s.similarityLines);
+  const ideas = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.ideas ?? [];
+  });
   const prevKeysRef = useRef<Set<string>>(new Set());
 
   const currentKeys = new Set(lines.map((l) => `${l.fromId}-${l.toId}`));
@@ -16,6 +20,8 @@ export function SimilarityLines() {
   });
 
   if (lines.length === 0) return null;
+
+  const ideasById = new Map(ideas.map((i) => [i.id, i]));
 
   return (
     <svg
@@ -32,13 +38,16 @@ export function SimilarityLines() {
       {lines.map((line) => {
         const key = `${line.fromId}-${line.toId}`;
         const isNew = newKeys.has(key);
+        const from = ideasById.get(line.fromId);
+        const to = ideasById.get(line.toId);
+        if (!from || !to) return null;
         return (
           <line
             key={key}
-            x1={line.fromX + 100}
-            y1={line.fromY + 22}
-            x2={line.toX + 100}
-            y2={line.toY + 22}
+            x1={from.x + 100}
+            y1={from.y + 22}
+            x2={to.x + 100}
+            y2={to.y + 22}
             stroke="var(--line-color)"
             strokeWidth={1}
             opacity={0.07}

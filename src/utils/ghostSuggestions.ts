@@ -61,7 +61,8 @@ function buildUserMessage(
 }
 
 function parseResponse(raw: string, triggerMode: 'manual' | 'auto'): SuggestionResult[] {
-  const parsed = JSON.parse(raw) as { suggestions: SuggestionResult[] };
+  const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const parsed = JSON.parse(stripped) as { suggestions: SuggestionResult[] };
   if (!Array.isArray(parsed.suggestions)) return [];
   const limit = triggerMode === 'auto' ? 2 : 5;
   return parsed.suggestions

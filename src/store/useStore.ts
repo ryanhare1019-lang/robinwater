@@ -1,14 +1,14 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition, TAG_COLORS } from "../types";
 import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
 import { computeSimilarityLines, SimilarityLine } from "../utils/similarity";
 import { getTagColor } from "../utils/aiTags";
+import { generateId } from "../utils/id";
 
-function generateId(): string {
-  return crypto.randomUUID();
-}
+// Module-level storage for flash animation timers — not persisted to disk
+let flashTimers: ReturnType<typeof setTimeout>[] = [];
 
 function createDefaultCanvas(name = "Ideas"): Canvas {
   return {
@@ -101,9 +101,9 @@ interface AppState {
   // AI Tagging
   isAutoTagLoading: boolean;
   tagJustTagged: string[];
-  tagFlashTimers: ReturnType<typeof setTimeout>[];
   applyAiTags: (tagDefinitions: AITagDefinition[]) => void;
   removeAiTag: (tagId: string) => void;
+  removeAiTagFromIdea: (tagId: string, ideaId: string) => void;
   renameAiTag: (tagId: string, newLabel: string) => void;
   setAutoTagLoading: (v: boolean) => void;
 }
@@ -142,7 +142,6 @@ export const useStore = create<AppState>((set, get) => {
     lastAutoTriggerAt: 0,
     isAutoTagLoading: false,
     tagJustTagged: [],
-    tagFlashTimers: [],
     settingsModalOpen: false,
     suggestCooldownUntil: 0,
 
@@ -238,12 +237,16 @@ export const useStore = create<AppState>((set, get) => {
         }
         return updated;
       });
-      set({
+      const nextState: Partial<AppState> = {
         canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
           ...c, ideas,
         })),
-        similarityLines: computeSimilarityLines(ideas),
-      });
+      };
+      // Only recompute similarity when keywords may have changed (text update), not on position/size drags
+      if (updates.text !== undefined) {
+        nextState.similarityLines = computeSimilarityLines(ideas);
+      }
+      set(nextState);
     },
 
     deleteIdea: (id) => {
@@ -408,8 +411,7 @@ export const useStore = create<AppState>((set, get) => {
       let questionTagId: string | undefined;
       let updatedTags = canvas.tags || [];
       if (ghost.type === 'question') {
-        // yellow dot color from TAG_COLORS
-        const YELLOW_COLOR = '#ffd76b';
+        const YELLOW_COLOR = TAG_COLORS.yellow.dot;
         const existing = updatedTags.find((t) => t.color === YELLOW_COLOR);
         if (existing) {
           questionTagId = existing.id;
@@ -488,26 +490,21 @@ export const useStore = create<AppState>((set, get) => {
       });
 
       // Cancel any existing flash timers before starting new ones
-      get().tagFlashTimers.forEach((t) => clearTimeout(t));
+      flashTimers.forEach((t) => clearTimeout(t));
+      flashTimers = [];
 
       // Staggered flash animation
       const taggedIdeaIds = Object.keys(ideaTagMap);
-      const timerIds: ReturnType<typeof setTimeout>[] = [];
       taggedIdeaIds.forEach((ideaId, idx) => {
         const outerTimer = setTimeout(() => {
           set((s) => ({ tagJustTagged: [...s.tagJustTagged, ideaId] }));
           const innerTimer = setTimeout(() => {
             set((s) => ({ tagJustTagged: s.tagJustTagged.filter((id) => id !== ideaId) }));
-            // Clear the timer array once all flashes are done
-            if (idx === taggedIdeaIds.length - 1) {
-              set({ tagFlashTimers: [] });
-            }
           }, 600);
-          timerIds.push(innerTimer);
+          flashTimers.push(innerTimer);
         }, idx * 100);
-        timerIds.push(outerTimer);
+        flashTimers.push(outerTimer);
       });
-      set({ tagFlashTimers: timerIds });
     },
 
     removeAiTag: (tagId) => {
@@ -520,6 +517,20 @@ export const useStore = create<AppState>((set, get) => {
             ...idea,
             aiTags: idea.aiTags?.filter((id) => id !== tagId),
           })),
+        })),
+      });
+    },
+
+    removeAiTagFromIdea: (tagId, ideaId) => {
+      const state = get();
+      set({
+        canvases: updateActiveCanvas(state.canvases, state.activeCanvasId, (c) => ({
+          ...c,
+          ideas: c.ideas.map((idea) =>
+            idea.id === ideaId
+              ? { ...idea, aiTags: idea.aiTags?.filter((id) => id !== tagId) }
+              : idea
+          ),
         })),
       });
     },

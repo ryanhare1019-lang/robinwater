@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useStore } from "../store/useStore";
-import { triggerSuggest } from "../utils/triggerSuggest";
 import { triggerAutoTag, getHasAiTags } from "../utils/triggerAutoTag";
+import { triggerSuggest } from "../utils/triggerSuggest";
 import { triggerQuestions } from "../utils/triggerQuestions";
 
 const BASE_BUTTON_STYLE: React.CSSProperties = {
@@ -23,82 +23,33 @@ export function AiControlsBar() {
   const config = useStore((s) => s.config);
   const canvases = useStore((s) => s.canvases);
   const activeCanvasId = useStore((s) => s.activeCanvasId);
-  const isSuggestLoading = useStore((s) => s.isSuggestLoading);
   const isAutoTagLoading = useStore((s) => s.isAutoTagLoading);
-  const isQuestionsLoading = useStore((s) => s.isQuestionsLoading);
   const setSettingsModalOpen = useStore((s) => s.setSettingsModalOpen);
-  const suggestCooldownUntil = useStore((s) => s.suggestCooldownUntil);
-  const setSuggestCooldownUntil = useStore((s) => s.setSuggestCooldownUntil);
+
+  const isSuggestLoading = useStore((s) => s.isSuggestLoading);
+  const isQuestionsLoading = useStore((s) => s.isQuestionsLoading);
 
   const [suggestError, setSuggestError] = useState<string | null>(null);
   const [autoTagError, setAutoTagError] = useState<string | null>(null);
   const [questionsError, setQuestionsError] = useState<string | null>(null);
-
-  // Re-tag warning state
   const [reTagPending, setReTagPending] = useState(false);
   const reTagTimer = useRef<ReturnType<typeof setTimeout>>();
 
-  // Issue 2: cleanup reTagTimer on unmount
   useEffect(() => {
     return () => {
       if (reTagTimer.current) clearTimeout(reTagTimer.current);
     };
   }, []);
 
-  // Issue 3: force re-render when SUGGEST cooldown expires
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    if (suggestCooldownUntil > Date.now()) {
-      const remaining = suggestCooldownUntil - Date.now();
-      const t = setTimeout(() => setTick(n => n + 1), remaining + 50);
-      return () => clearTimeout(t);
-    }
-  }, [suggestCooldownUntil]);
-
-  const anyLoading = isSuggestLoading || isAutoTagLoading || isQuestionsLoading;
-
-  // Feature toggles
-  const showSuggest = config?.aiFeatures.ghostNodes !== false;
-  const showAutoTag = config?.aiFeatures.autoTagging !== false;
-  const showQuestions = config?.aiFeatures.questionGeneration !== false;
-
-  // If all disabled, render nothing
-  if (!showSuggest && !showAutoTag && !showQuestions) return null;
-
   const activeCanvas = canvases.find((c) => c.id === activeCanvasId);
   const ideaCount = activeCanvas?.ideas.length ?? 0;
-
-  const isSuggestOnCooldown = Date.now() < suggestCooldownUntil;
-
-  async function handleSuggest() {
-    if (!config?.anthropicApiKey) {
-      setSettingsModalOpen(true);
-      return;
-    }
-    if (anyLoading || isSuggestOnCooldown) return;
-
-    if (ideaCount < 2) {
-      setSuggestError("✦ NEED MORE IDEAS");
-      setTimeout(() => setSuggestError(null), 2000);
-      return;
-    }
-
-    try {
-      await triggerSuggest("manual");
-      setSuggestCooldownUntil(Date.now() + 10_000);
-    } catch {
-      setSuggestError("✦ ERROR");
-      setTimeout(() => setSuggestError(null), 3000);
-    }
-  }
 
   async function handleAutoTag() {
     if (!config?.anthropicApiKey) {
       setSettingsModalOpen(true);
       return;
     }
-    if (anyLoading) return;
+    if (isAutoTagLoading) return;
 
     if (ideaCount < 2) {
       setAutoTagError("◈ NEED MORE IDEAS");
@@ -114,128 +65,89 @@ export function AiControlsBar() {
         reTagTimer.current = setTimeout(() => setReTagPending(false), 3000);
         return;
       }
-      // Second click within 3s — proceed
       setReTagPending(false);
       if (reTagTimer.current) clearTimeout(reTagTimer.current);
     }
 
     try {
       await triggerAutoTag();
-    } catch {
+    } catch (err) {
+      console.error("[AutoTag] error:", err);
       setAutoTagError("◈ ERROR");
       setTimeout(() => setAutoTagError(null), 3000);
     }
   }
 
-  async function handleQuestions() {
-    if (!config?.anthropicApiKey) {
-      setSettingsModalOpen(true);
+  async function handleSuggest() {
+    if (!config?.anthropicApiKey) { setSettingsModalOpen(true); return; }
+    if (isSuggestLoading || isAutoTagLoading || isQuestionsLoading) return;
+    if (ideaCount < 2) {
+      setSuggestError("✦ NEED MORE IDEAS");
+      setTimeout(() => setSuggestError(null), 2000);
       return;
     }
-    if (anyLoading) return;
+    try {
+      await triggerSuggest("manual");
+    } catch (err) {
+      console.error("[Suggest] error:", err);
+      setSuggestError("✦ ERROR");
+      setTimeout(() => setSuggestError(null), 3000);
+    }
+  }
 
+  async function handleQuestions() {
+    if (!config?.anthropicApiKey) { setSettingsModalOpen(true); return; }
+    if (isSuggestLoading || isAutoTagLoading || isQuestionsLoading) return;
     if (ideaCount < 2) {
       setQuestionsError("? NEED MORE IDEAS");
       setTimeout(() => setQuestionsError(null), 2000);
       return;
     }
-
     try {
       await triggerQuestions("canvas-wide");
-    } catch {
+    } catch (err) {
+      console.error("[Questions] error:", err);
       setQuestionsError("? ERROR");
       setTimeout(() => setQuestionsError(null), 3000);
     }
   }
 
-  function renderButton(opts: {
-    show: boolean;
-    loading: boolean;
-    loadingText: string;
-    normalText: string;
-    error: string | null;
-    disabled: boolean;
-    onClick: () => void;
+  function btn(opts: {
+    loading: boolean; loadingText: string; normalText: string;
+    error: string | null; onClick: () => void;
   }) {
-    if (!opts.show) return null;
-
-    const isError = opts.error !== null;
-    const isLoading = opts.loading;
-    const isDisabled = opts.disabled || isLoading;
-
-    let label = opts.normalText;
-    if (isLoading) label = opts.loadingText;
-    else if (isError) label = opts.error!;
-
-    const style: React.CSSProperties = {
-      ...BASE_BUTTON_STYLE,
-      color: isError ? "#CC4444" : "#444444",
-      cursor: isDisabled ? "default" : "pointer",
-      animation: isLoading ? "ai-btn-pulse 1.5s ease-in-out infinite" : undefined,
-    };
-
+    const isErr = opts.error !== null;
+    const label = opts.loading ? opts.loadingText : isErr ? opts.error! : opts.normalText;
     return (
       <button
-        style={style}
+        style={{
+          ...BASE_BUTTON_STYLE,
+          color: isErr ? "#CC4444" : "#444444",
+          cursor: opts.loading ? "default" : "pointer",
+          animation: opts.loading ? "ai-btn-pulse 1.5s ease-in-out infinite" : undefined,
+        }}
         onClick={opts.onClick}
-        disabled={isDisabled}
-        onMouseEnter={(e) => {
-          if (!isDisabled && !isError) {
-            e.currentTarget.style.borderColor = "#333333";
-            e.currentTarget.style.color = "#888888";
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isDisabled && !isError) {
-            e.currentTarget.style.borderColor = "#1A1A1A";
-            e.currentTarget.style.color = "#444444";
-          }
-        }}
-      >
-        {label}
-      </button>
+        disabled={opts.loading}
+        onMouseEnter={(e) => { if (!opts.loading && !isErr) { e.currentTarget.style.borderColor = "#333333"; e.currentTarget.style.color = "#888888"; } }}
+        onMouseLeave={(e) => { if (!opts.loading && !isErr) { e.currentTarget.style.borderColor = "#1A1A1A"; e.currentTarget.style.color = "#444444"; } }}
+      >{label}</button>
     );
   }
 
-  // Determine auto-tag button text (re-tag warning)
-  const autoTagNormalText = reTagPending ? "◈ RE-TAG? (CLICK AGAIN)" : "◈ AUTO-TAG";
+  const autoTagLabel = isAutoTagLoading ? "◈ ANALYZING..." : autoTagError ?? (reTagPending ? "◈ RE-TAG? (CLICK AGAIN)" : "◈ AUTO-TAG");
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        gap: 4,
-        alignItems: "center",
-      }}
-    >
-      {renderButton({
-        show: showSuggest,
-        loading: isSuggestLoading,
-        loadingText: "✦ THINKING...",
-        normalText: "✦ SUGGEST",
-        error: suggestError,
-        disabled: anyLoading || isSuggestOnCooldown,
-        onClick: handleSuggest,
-      })}
-      {renderButton({
-        show: showAutoTag,
-        loading: isAutoTagLoading,
-        loadingText: "◈ ANALYZING...",
-        normalText: autoTagNormalText,
-        error: autoTagError,
-        disabled: anyLoading,
-        onClick: handleAutoTag,
-      })}
-      {renderButton({
-        show: showQuestions,
-        loading: isQuestionsLoading,
-        loadingText: "? THINKING...",
-        normalText: "? QUESTIONS",
-        error: questionsError,
-        disabled: anyLoading,
-        onClick: handleQuestions,
-      })}
+    <div style={{ display: "flex", flexDirection: "row", gap: 4, alignItems: "center" }}>
+      {btn({ loading: isSuggestLoading, loadingText: "✦ THINKING...", normalText: "✦ SUGGEST", error: suggestError, onClick: handleSuggest })}
+      {config?.aiFeatures.autoTagging !== false && (
+        <button
+          style={{ ...BASE_BUTTON_STYLE, color: autoTagError ? "#CC4444" : "#444444", cursor: isAutoTagLoading ? "default" : "pointer", animation: isAutoTagLoading ? "ai-btn-pulse 1.5s ease-in-out infinite" : undefined }}
+          onClick={handleAutoTag} disabled={isAutoTagLoading}
+          onMouseEnter={(e) => { if (!isAutoTagLoading && !autoTagError) { e.currentTarget.style.borderColor = "#333333"; e.currentTarget.style.color = "#888888"; } }}
+          onMouseLeave={(e) => { if (!isAutoTagLoading && !autoTagError) { e.currentTarget.style.borderColor = "#1A1A1A"; e.currentTarget.style.color = "#444444"; } }}
+        >{autoTagLabel}</button>
+      )}
+      {btn({ loading: isQuestionsLoading, loadingText: "? THINKING...", normalText: "? QUESTIONS", error: questionsError, onClick: handleQuestions })}
     </div>
   );
 }

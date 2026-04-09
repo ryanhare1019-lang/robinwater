@@ -59,12 +59,11 @@ export function GhostNodeCard({ ghost }: Props) {
         fontSize: "13px",
         color: "#888888",
         userSelect: "none",
-        animation: "ghost-pulse 3s ease-in-out infinite",
+        opacity: isDismissing ? 0 : 0.65,
         transform: isDismissing ? "scale(0)" : "scale(1)",
-        opacity: isDismissing ? 0 : undefined,
         transition: isDismissing
           ? "transform 0.2s ease-in, opacity 0.2s ease-in"
-          : undefined,
+          : "opacity 0.15s ease",
         zIndex: isHovered ? 50 : 5,
         pointerEvents: "auto",
       }}
@@ -129,61 +128,59 @@ export function GhostNodeCard({ ghost }: Props) {
           {bottomLabel}
         </span>
 
-        {isHovered && (
-          <div style={{ display: "flex", gap: 4 }}>
-            {/* Accept button */}
-            <button
-              onMouseEnter={() => setAcceptHovered(true)}
-              onMouseLeave={() => setAcceptHovered(false)}
-              onClick={handleAccept}
-              style={{
-                width: 16,
-                height: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-                border: `1px solid ${acceptHovered ? "#44AA66" : "#1A1A1A"}`,
-                color: acceptHovered ? "#44AA66" : "#555555",
-                cursor: "pointer",
-                fontSize: "9px",
-                fontFamily: "var(--font-mono)",
-                padding: 0,
-                transition: "border-color 0.15s, color 0.15s",
-                flexShrink: 0,
-              }}
-              title="Accept suggestion"
-            >
-              ✓
-            </button>
+        <div style={{ display: "flex", gap: 6 }}>
+          {/* Accept button */}
+          <button
+            onMouseEnter={() => setAcceptHovered(true)}
+            onMouseLeave={() => setAcceptHovered(false)}
+            onClick={handleAccept}
+            style={{
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: `1px solid ${acceptHovered ? "#44AA66" : "#2A2A2A"}`,
+              color: acceptHovered ? "#44AA66" : "#444444",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontFamily: "var(--font-mono)",
+              padding: 0,
+              transition: "border-color 0.15s, color 0.15s",
+              flexShrink: 0,
+            }}
+            title="Accept"
+          >
+            ✓
+          </button>
 
-            {/* Dismiss button */}
-            <button
-              onMouseEnter={() => setDismissHovered(true)}
-              onMouseLeave={() => setDismissHovered(false)}
-              onClick={handleDismiss}
-              style={{
-                width: 16,
-                height: 16,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: "transparent",
-                border: `1px solid ${dismissHovered ? "#CC4444" : "#1A1A1A"}`,
-                color: dismissHovered ? "#CC4444" : "#555555",
-                cursor: "pointer",
-                fontSize: "9px",
-                fontFamily: "var(--font-mono)",
-                padding: 0,
-                transition: "border-color 0.15s, color 0.15s",
-                flexShrink: 0,
-              }}
-              title="Dismiss suggestion"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+          {/* Dismiss button */}
+          <button
+            onMouseEnter={() => setDismissHovered(true)}
+            onMouseLeave={() => setDismissHovered(false)}
+            onClick={handleDismiss}
+            style={{
+              width: 28,
+              height: 28,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "transparent",
+              border: `1px solid ${dismissHovered ? "#CC4444" : "#2A2A2A"}`,
+              color: dismissHovered ? "#CC4444" : "#444444",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontFamily: "var(--font-mono)",
+              padding: 0,
+              transition: "border-color 0.15s, color 0.15s",
+              flexShrink: 0,
+            }}
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
       </div>
     </div>
   );

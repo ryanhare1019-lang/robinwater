@@ -1,10 +1,7 @@
 import { useStore } from '../store/useStore';
 import { AITagDefinition } from '../types';
 import { fetchAutoTags, getTagColor } from './aiTags';
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
+import { generateId } from './id';
 
 export async function triggerAutoTag(): Promise<void> {
   const state = useStore.getState();
@@ -54,8 +51,6 @@ export async function triggerAutoTag(): Promise<void> {
     });
 
     applyAiTags(tagDefinitions);
-  } catch (err) {
-    throw err;
   } finally {
     setAutoTagLoading(false);
   }

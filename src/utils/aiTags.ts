@@ -71,7 +71,8 @@ ${ideaLines.join('\n')}
 Analyze these and create thematic tags.`;
 
   const parseResponse = (raw: string): Array<{ label: string; ideaTexts: string[] }> => {
-    const parsed = JSON.parse(raw) as { tags: Array<{ label: string; ideaTexts: string[] }> };
+    const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(stripped) as { tags: Array<{ label: string; ideaTexts: string[] }> };
     return parsed.tags;
   };
 

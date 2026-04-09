@@ -20,7 +20,8 @@ Respond ONLY with valid JSON, no markdown, no backticks, no preamble:
 {"questions": [{"text": "the question text", "relatedTo": "exact text of the idea this question targets", "type": "challenge" | "expand" | "connect"}]}`;
 
 function parseResponse(raw: string): QuestionResult[] {
-  const parsed = JSON.parse(raw) as { questions: QuestionResult[] };
+  const stripped = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  const parsed = JSON.parse(stripped) as { questions: QuestionResult[] };
   if (!Array.isArray(parsed.questions)) throw new Error('Invalid response shape');
   return parsed.questions;
 }

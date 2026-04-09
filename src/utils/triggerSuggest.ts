@@ -1,36 +1,8 @@
 import { useStore } from '../store/useStore';
 import { GhostNode } from '../types';
 import { fetchSuggestions } from './ghostSuggestions';
-
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-/** Pick a position near a related idea, or near viewport center. */
-function positionGhostNode(
-  relatedToId: string | null,
-  ideas: import('../types').Idea[],
-  viewport: import('../types').Viewport
-): { x: number; y: number } {
-  const related = relatedToId ? ideas.find((i) => i.id === relatedToId) : null;
-
-  if (related) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = 100 + Math.random() * 100;
-    return {
-      x: Math.round(related.x + Math.cos(angle) * dist),
-      y: Math.round(related.y + Math.sin(angle) * dist),
-    };
-  }
-
-  // Near viewport center
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  return {
-    x: Math.round(-viewport.x / viewport.zoom + (Math.random() * vw * 0.4 + vw * 0.3) / viewport.zoom),
-    y: Math.round(-viewport.y / viewport.zoom + (Math.random() * vh * 0.4 + vh * 0.3) / viewport.zoom),
-  };
-}
+import { generateId } from './id';
+import { placeGhostNode } from './ghostPlacement';
 
 const AUTO_COOLDOWN_MS = 30_000;
 
@@ -85,19 +57,20 @@ export async function triggerSuggest(
       newestIdeaText
     );
 
-    // Convert suggestions to GhostNodes
+    // Get fresh state for viewport (may have changed during API call)
+    const freshState = useStore.getState();
+    const freshCanvas = freshState.canvases.find((c) => c.id === freshState.activeCanvasId);
+    const viewport = freshCanvas?.viewport || { x: 0, y: 0, zoom: 1 };
+    const freshIdeas = freshCanvas?.ideas || ideas;
+
+    // Convert suggestions to GhostNodes, accumulating placed positions to avoid intra-batch overlaps
+    const placedGhosts: { x: number; y: number }[] = [];
     const ghostNodes: GhostNode[] = suggestions.map((s) => {
-      // Find relatedToId by matching text
-      const relatedIdea = ideas.find((i) => i.text === s.relatedTo);
+      const relatedIdea = freshIdeas.find((i) => i.text === s.relatedTo);
       const relatedToId = relatedIdea ? relatedIdea.id : null;
 
-      // Get fresh state for viewport (may have changed)
-      const freshState = useStore.getState();
-      const freshCanvas = freshState.canvases.find((c) => c.id === freshState.activeCanvasId);
-      const viewport = freshCanvas?.viewport || { x: 0, y: 0, zoom: 1 };
-      const freshIdeas = freshCanvas?.ideas || ideas;
-
-      const { x, y } = positionGhostNode(relatedToId, freshIdeas, viewport);
+      const { x, y } = placeGhostNode(relatedToId, freshIdeas, viewport, placedGhosts);
+      placedGhosts.push({ x, y });
 
       return {
         id: generateId(),

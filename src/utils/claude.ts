@@ -1,6 +1,6 @@
 import { fetch } from '@tauri-apps/plugin-http';
 
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514';
+const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
 
 interface ClaudeMessage {
   role: 'user' | 'assistant';
@@ -19,6 +19,7 @@ export async function callClaude(
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
@@ -29,7 +30,8 @@ export async function callClaude(
   });
 
   if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`);
+    const body = await response.text().catch(() => '(no body)');
+    throw new Error(`Claude API error ${response.status}: ${body}`);
   }
 
   const data = await response.json() as { content: Array<{ type: string; text: string }> };

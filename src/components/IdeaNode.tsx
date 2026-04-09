@@ -38,6 +38,7 @@ export function IdeaNode({ idea }: Props) {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.aiTagDefinitions || EMPTY_AI_TAG_DEFS;
   });
+  const removeAiTagFromIdea = useStore((s) => s.removeAiTagFromIdea);
 
   const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
 
@@ -344,15 +345,35 @@ export function IdeaNode({ idea }: Props) {
                 fontFamily: "monospace",
                 textTransform: "uppercase",
                 letterSpacing: "0.06em",
-                padding: "2px 6px",
+                padding: "2px 4px 2px 6px",
                 border: `1px solid ${tagDef.color}40`,
                 background: `${tagDef.color}1F`,
                 color: `${tagDef.color}B3`,
                 borderRadius: 0,
-                display: "inline-block",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
               }}
             >
               {tagDef.label}
+              {isHovered && (
+                <span
+                  onMouseDown={(e) => {
+                    e.stopPropagation();
+                    removeAiTagFromIdea(tagDef.id, idea.id);
+                  }}
+                  style={{
+                    cursor: "pointer",
+                    opacity: 0.5,
+                    lineHeight: 1,
+                    fontSize: "10px",
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
+                >
+                  ×
+                </span>
+              )}
             </span>
           ))}
         </div>

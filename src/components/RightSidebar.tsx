@@ -163,12 +163,8 @@ export function RightSidebar() {
           ref={titleRef}
           value={titleValue}
           onChange={(e) => {
-            const val = e.target.value;
-            setTitleValue(val);
+            setTitleValue(e.target.value);
             autoGrow(titleRef.current);
-            if (selectedId && val.trim()) {
-              updateIdea(selectedId, { text: val.trim(), description: descValue });
-            }
           }}
           rows={1}
           style={{
@@ -211,12 +207,8 @@ export function RightSidebar() {
           ref={descRef}
           value={descValue}
           onChange={(e) => {
-            const val = e.target.value;
-            setDescValue(val);
+            setDescValue(e.target.value);
             autoGrow(descRef.current);
-            if (selectedId) {
-              updateIdea(selectedId, { text: titleValue.trim() || idea.text, description: val });
-            }
           }}
           placeholder="add a description..."
           style={{
