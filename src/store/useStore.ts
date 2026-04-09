@@ -110,6 +110,19 @@ interface AppState {
   removeAiTagFromIdea: (tagId: string, ideaId: string) => void;
   renameAiTag: (tagId: string, newLabel: string) => void;
   setAutoTagLoading: (v: boolean) => void;
+
+  // Search
+  searchOpen: boolean;
+  searchQuery: string;
+  searchTagFilter: string | null;
+  searchConnectionFilter: 'any' | 'connected' | 'unconnected';
+  searchDateFilter: 'any' | 'today' | 'week';
+  setSearchOpen: (v: boolean) => void;
+  setSearchQuery: (q: string) => void;
+  setSearchTagFilter: (id: string | null) => void;
+  setSearchConnectionFilter: (f: 'any' | 'connected' | 'unconnected') => void;
+  setSearchDateFilter: (f: 'any' | 'today' | 'week') => void;
+  resetSearch: () => void;
 }
 
 function getActiveCanvas(state: { canvases: Canvas[]; activeCanvasId: string }): Canvas {
@@ -149,6 +162,11 @@ export const useStore = create<AppState>((set, get) => {
     tagJustTagged: [],
     settingsModalOpen: false,
     suggestCooldownUntil: 0,
+    searchOpen: false,
+    searchQuery: '',
+    searchTagFilter: null,
+    searchConnectionFilter: 'any',
+    searchDateFilter: 'any',
 
     addIdea: (text: string) => {
       const state = get();
@@ -579,6 +597,19 @@ export const useStore = create<AppState>((set, get) => {
         })),
       });
     },
+
+    // Search
+    setSearchOpen: (v) => set({ searchOpen: v }),
+    setSearchQuery: (q) => set({ searchQuery: q }),
+    setSearchTagFilter: (id) => set({ searchTagFilter: id }),
+    setSearchConnectionFilter: (f) => set({ searchConnectionFilter: f }),
+    setSearchDateFilter: (f) => set({ searchDateFilter: f }),
+    resetSearch: () => set({
+      searchQuery: '',
+      searchTagFilter: null,
+      searchConnectionFilter: 'any',
+      searchDateFilter: 'any',
+    }),
 
     // Tag management
     addTag: (name, color) => {

@@ -44,6 +44,63 @@ export function IdeaNode({ idea }: Props) {
   const removeAiTagFromIdea = useStore((s) => s.removeAiTagFromIdea);
   const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
 
+  const isSearchActive = useStore(
+    (s) =>
+      s.searchOpen &&
+      (s.searchQuery.length > 0 ||
+        s.searchTagFilter !== null ||
+        s.searchConnectionFilter !== "any" ||
+        s.searchDateFilter !== "any")
+  );
+
+  const matchesSearch = useStore((s) => {
+    if (!s.searchOpen) return true;
+    const q = s.searchQuery.toLowerCase();
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    const connections = canvas?.connections || [];
+
+    // Text search
+    if (q.length > 0) {
+      const textMatch =
+        idea.text.toLowerCase().includes(q) ||
+        idea.description?.toLowerCase().includes(q);
+      if (!textMatch) return false;
+    }
+
+    // Tag filter
+    if (s.searchTagFilter) {
+      const hasTag =
+        (idea.tags || []).includes(s.searchTagFilter) ||
+        (idea.aiTags || []).includes(s.searchTagFilter);
+      if (!hasTag) return false;
+    }
+
+    // Connection filter
+    if (s.searchConnectionFilter !== "any") {
+      const isConnected = connections.some(
+        (c) => c.sourceId === idea.id || c.targetId === idea.id
+      );
+      if (s.searchConnectionFilter === "connected" && !isConnected) return false;
+      if (s.searchConnectionFilter === "unconnected" && isConnected) return false;
+    }
+
+    // Date filter
+    if (s.searchDateFilter !== "any") {
+      const created = new Date(idea.createdAt);
+      const now = new Date();
+      const dayMs = 86400000;
+      if (s.searchDateFilter === "today") {
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        if (created < startOfDay) return false;
+      } else if (s.searchDateFilter === "week") {
+        const weekAgo = new Date(now.getTime() - 7 * dayMs);
+        if (created < weekAgo) return false;
+      }
+    }
+
+    return true;
+  });
+
   const zoom = useStore((s) => {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.viewport.zoom ?? 1;
@@ -298,7 +355,7 @@ export function IdeaNode({ idea }: Props) {
           : isDragging
           ? "scale(1.03)"
           : "scale(1)",
-        opacity: isDeleting ? 0 : 1,
+        opacity: isDeleting ? 0 : isSearchActive && !matchesSearch ? 0.15 : 1,
         transition: isDeleting
           ? "transform 0.25s ease-in, opacity 0.25s ease-in"
           : isDragging

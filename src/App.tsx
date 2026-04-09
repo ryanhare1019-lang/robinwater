@@ -9,6 +9,7 @@ import { ConnectingLine } from "./components/ConnectingLine";
 import { UpdateModal } from "./components/UpdateModal";
 import { NodeHoverPreview } from "./components/NodeHoverPreview";
 import { ZoomIndicator } from "./components/ZoomIndicator";
+import { SearchOverlay } from "./components/SearchOverlay";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
 import { loadConfig } from "./utils/config";
@@ -183,6 +184,7 @@ export function App() {
       <ContextMenu />
       <NodeHoverPreview />
       <ZoomIndicator />
+      <SearchOverlay />
       {selectedId && <RightSidebar />}
     </>
   );

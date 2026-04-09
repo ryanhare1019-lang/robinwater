@@ -39,16 +39,10 @@ export function Canvas() {
   const applyTransform = useCallback((x: number, y: number, zoom: number) => {
     if (transformRef.current) {
       transformRef.current.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
-      // Scale font sizes up when zoomed out so text stays legible on screen.
-      // Full 1/zoom compensation, capped at 3× to avoid runaway sizes at extreme zoom-out.
-      const scale = zoom < 1 ? Math.min(1 / zoom, 3) : 1;
-      transformRef.current.style.setProperty("--body-size", `${Math.round(13 * scale)}px`);
-      transformRef.current.style.setProperty("--label-size", `${Math.round(10 * scale)}px`);
-      transformRef.current.style.setProperty("--heading-size", `${Math.round(14 * scale)}px`);
     }
   }, []);
 
-  // Keep ref in sync when store changes (e.g. Ctrl+0 reset) and reapply font scaling
+  // Keep ref in sync when store changes (e.g. Ctrl+0 reset)
   useEffect(() => {
     viewportRef.current = viewport;
     applyTransform(viewport.x, viewport.y, viewport.zoom);
@@ -186,7 +180,35 @@ export function Canvas() {
 
       if (e.ctrlKey && e.key === "0") {
         e.preventDefault();
-        setViewport({ x: 0, y: 0, zoom: 1 });
+        if (ideas.length === 0) {
+          setViewport({ x: 0, y: 0, zoom: 1 });
+        } else {
+          const midX = ideas.reduce((sum, i) => sum + i.x, 0) / ideas.length;
+          const midY = ideas.reduce((sum, i) => sum + i.y, 0) / ideas.length;
+          setViewport({ x: window.innerWidth / 2 - midX, y: window.innerHeight / 2 - midY, zoom: 1 });
+        }
+      }
+
+      if (e.ctrlKey && (e.key === "=" || e.key === "+")) {
+        e.preventDefault();
+        const vp = viewportRef.current;
+        const newZoom = Math.min(ZOOM_MAX, vp.zoom * 1.08);
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const canvasX = (cx - vp.x) / vp.zoom;
+        const canvasY = (cy - vp.y) / vp.zoom;
+        setViewport({ x: cx - canvasX * newZoom, y: cy - canvasY * newZoom, zoom: newZoom });
+      }
+
+      if (e.ctrlKey && e.key === "-") {
+        e.preventDefault();
+        const vp = viewportRef.current;
+        const newZoom = Math.max(ZOOM_MIN, vp.zoom * 0.92);
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const canvasX = (cx - vp.x) / vp.zoom;
+        const canvasY = (cy - vp.y) / vp.zoom;
+        setViewport({ x: cx - canvasX * newZoom, y: cy - canvasY * newZoom, zoom: newZoom });
       }
 
       if ((e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === "ArrowLeft" || e.key === "ArrowUp") && !inInput) {
