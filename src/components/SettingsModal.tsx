@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AppConfig, saveConfig } from '../utils/config';
+import { useStore } from '../store/useStore';
 
 interface Props {
   onClose: () => void;
@@ -47,7 +48,7 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
     fontFamily: 'var(--font-mono)',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
-    color: '#666666',
+    color: 'var(--text-secondary)',
     marginBottom: 6,
     display: 'block',
   };
@@ -57,17 +58,17 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
     fontFamily: 'var(--font-mono)',
     textTransform: 'uppercase',
     letterSpacing: '0.12em',
-    color: '#444444',
+    color: 'var(--text-tertiary)',
     marginBottom: 10,
     display: 'block',
   };
 
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: '#050505',
-    border: '1px solid #1A1A1A',
+    background: 'var(--bg-base)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: 0,
-    color: '#888888',
+    color: 'var(--text-secondary)',
     fontSize: 11,
     fontFamily: 'var(--font-mono)',
     padding: '7px 36px 7px 10px',
@@ -76,10 +77,10 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
   };
 
   const btnStyle: React.CSSProperties = {
-    background: '#080808',
-    border: '1px solid #1A1A1A',
+    background: 'var(--bg-surface)',
+    border: '1px solid var(--border-default)',
     borderRadius: 0,
-    color: '#444444',
+    color: 'var(--text-tertiary)',
     fontSize: 11,
     fontFamily: 'var(--font-mono)',
     textTransform: 'uppercase',
@@ -107,8 +108,8 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: '#0A0A0A',
-          border: '1px solid #222222',
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border-default)',
           borderRadius: 0,
           minWidth: 400,
           zIndex: 5001,
@@ -120,7 +121,7 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
         <div
           style={{
             padding: '14px 18px 12px',
-            borderBottom: '1px solid #1A1A1A',
+            borderBottom: '1px solid var(--border-subtle)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -131,7 +132,7 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
               fontSize: 11,
               textTransform: 'uppercase',
               letterSpacing: '0.12em',
-              color: '#666666',
+              color: 'var(--text-secondary)',
               fontFamily: 'var(--font-mono)',
             }}
           >
@@ -141,7 +142,7 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
             onClick={onClose}
             style={{
               fontSize: 11,
-              color: '#333333',
+              color: 'var(--text-muted)',
               cursor: 'pointer',
               fontFamily: 'var(--font-mono)',
             }}
@@ -162,8 +163,8 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
                 onChange={(e) => setApiKey(e.target.value)}
                 placeholder="sk-ant-..."
                 style={inputStyle}
-                onFocus={(e) => { e.currentTarget.style.borderColor = '#333333'; }}
-                onBlur={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
               />
               <button
                 onClick={() => setShowKey((v) => !v)}
@@ -175,7 +176,7 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
                   transform: 'translateY(-50%)',
                   background: 'none',
                   border: 'none',
-                  color: '#333333',
+                  color: 'var(--text-muted)',
                   fontSize: 11,
                   fontFamily: 'var(--font-mono)',
                   cursor: 'pointer',
@@ -262,20 +263,20 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
                   onClick={() => handleThemeSelect(t)}
                   style={{
                     ...btnStyle,
-                    borderColor: theme === t ? '#444444' : '#1A1A1A',
-                    color: theme === t ? '#AAAAAA' : '#444444',
+                    borderColor: theme === t ? 'var(--border-focus)' : 'var(--border-default)',
+                    color: theme === t ? 'var(--text-primary)' : 'var(--text-tertiary)',
                     flex: 1,
                   }}
                   onMouseEnter={(e) => {
                     if (theme !== t) {
-                      e.currentTarget.style.borderColor = '#333333';
-                      e.currentTarget.style.color = '#666666';
+                      e.currentTarget.style.borderColor = 'var(--border-strong)';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (theme !== t) {
-                      e.currentTarget.style.borderColor = '#1A1A1A';
-                      e.currentTarget.style.color = '#444444';
+                      e.currentTarget.style.borderColor = 'var(--border-default)';
+                      e.currentTarget.style.color = 'var(--text-tertiary)';
                     }
                   }}
                 >
@@ -285,6 +286,33 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
             </div>
           </div>
 
+          {/* Shortcuts / Commands */}
+          <div style={{ marginBottom: 22 }}>
+            <span style={sectionLabelStyle}>SHORTCUTS</span>
+            <button
+              onClick={() => {
+                useStore.getState().setShortcutsOpen(true);
+                onClose();
+              }}
+              style={{
+                ...btnStyle,
+                width: '100%',
+                textAlign: 'left' as const,
+                padding: '6px 10px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-strong)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'var(--border-default)';
+                e.currentTarget.style.color = 'var(--text-tertiary)';
+              }}
+            >
+              VIEW COMMANDS
+            </button>
+          </div>
+
           {/* Save error */}
           {error && (
             <div style={{ marginBottom: 12 }}>
@@ -292,7 +320,7 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
                 style={{
                   fontSize: 11,
                   fontFamily: 'var(--font-mono)',
-                  color: '#CC4444',
+                  color: 'var(--accent-red)',
                 }}
               >
                 {error}
@@ -306,12 +334,12 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
               onClick={onClose}
               style={btnStyle}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#333333';
-                e.currentTarget.style.color = '#666666';
+                e.currentTarget.style.borderColor = 'var(--border-strong)';
+                e.currentTarget.style.color = 'var(--text-secondary)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#1A1A1A';
-                e.currentTarget.style.color = '#444444';
+                e.currentTarget.style.borderColor = 'var(--border-default)';
+                e.currentTarget.style.color = 'var(--text-tertiary)';
               }}
             >
               CANCEL
@@ -321,19 +349,19 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
               disabled={saving}
               style={{
                 ...btnStyle,
-                color: saving ? '#333333' : '#558855',
-                borderColor: saving ? '#1A1A1A' : '#2A3A2A',
+                color: saving ? 'var(--text-muted)' : 'var(--accent-green)',
+                borderColor: saving ? 'var(--border-default)' : 'rgba(68, 255, 136, 0.2)',
               }}
               onMouseEnter={(e) => {
                 if (!saving) {
-                  e.currentTarget.style.borderColor = '#3A5A3A';
-                  e.currentTarget.style.color = '#66AA66';
+                  e.currentTarget.style.borderColor = 'rgba(68, 255, 136, 0.3)';
+                  e.currentTarget.style.color = 'var(--accent-green)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!saving) {
-                  e.currentTarget.style.borderColor = '#2A3A2A';
-                  e.currentTarget.style.color = '#558855';
+                  e.currentTarget.style.borderColor = 'rgba(68, 255, 136, 0.2)';
+                  e.currentTarget.style.color = 'var(--accent-green)';
                 }
               }}
             >

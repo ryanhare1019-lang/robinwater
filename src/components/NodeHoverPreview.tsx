@@ -65,7 +65,7 @@ export function NodeHoverPreview() {
 
   const dividerStyle = {
     height: 1,
-    background: "#1A1A1A",
+    background: "var(--border-subtle)",
     margin: "12px 0",
   };
 
@@ -78,8 +78,8 @@ export function NodeHoverPreview() {
         width: PREVIEW_WIDTH,
         maxHeight: "80vh",
         overflowY: "auto",
-        background: "#0C0C0C",
-        border: "1px solid #222222",
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-default)",
         zIndex: 3000,
         fontFamily: "var(--font-mono)",
         fontSize: "12px",
@@ -141,7 +141,7 @@ export function NodeHoverPreview() {
           style={{
             fontSize: "12px",
             lineHeight: 1.55,
-            color: idea.description?.trim() ? "var(--text-secondary)" : "#333333",
+            color: idea.description?.trim() ? "var(--text-secondary)" : "var(--text-muted)",
             wordBreak: "break-word",
           }}
         >
@@ -193,20 +193,20 @@ export function NodeHoverPreview() {
           <div
             style={{
               fontSize: "11px",
-              color: "#555555",
+              color: "var(--text-secondary)",
               lineHeight: 1.6,
               wordBreak: "break-word",
             }}
           >
             {connectedIdeas.map((ci, idx) => (
               <span key={ci.id}>
-                {idx > 0 && <span style={{ color: "#333333" }}>,&nbsp;</span>}
+                {idx > 0 && <span style={{ color: "var(--text-muted)" }}>,&nbsp;</span>}
                 {ci.text.length > 40 ? ci.text.slice(0, 40) + '…' : ci.text}
               </span>
             ))}
           </div>
         ) : (
-          <div style={{ fontSize: "11px", color: "#333333" }}>NO CONNECTIONS</div>
+          <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>NO CONNECTIONS</div>
         )}
       </div>
     </div>
