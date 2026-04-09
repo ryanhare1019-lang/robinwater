@@ -39,6 +39,12 @@ export function IdeaNode({ idea }: Props) {
     return canvas?.aiTagDefinitions || EMPTY_AI_TAG_DEFS;
   });
   const removeAiTagFromIdea = useStore((s) => s.removeAiTagFromIdea);
+  const zoom = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.viewport.zoom ?? 1;
+  });
+
+  const isChipMode = zoom < 0.35;
 
   const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
 
@@ -231,7 +237,7 @@ export function IdeaNode({ idea }: Props) {
         left: idea.x,
         top: idea.y,
         width: nodeWidth,
-        height: nodeHeight,
+        height: isChipMode ? undefined : nodeHeight,
         minWidth: 200,
         maxWidth: hasCustomSize ? undefined : 340,
         background: "var(--bg-surface)",
@@ -267,6 +273,25 @@ export function IdeaNode({ idea }: Props) {
         zIndex: isDragging ? 100 : isSelected ? 10 : 1,
       }}
     >
+      {/* CHIP MODE — compact 2-line preview when zoomed out */}
+      {isChipMode && (
+        <div
+          style={{
+            padding: "6px 10px",
+            fontSize: "var(--body-size)",
+            lineHeight: 1.4,
+            color: "var(--text-primary)",
+            overflow: "hidden",
+            display: "-webkit-box",
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: "vertical",
+            animation: "chip-enter 0.2s ease forwards",
+          }}
+        >
+          {idea.text}
+        </div>
+      )}
+
       {/* Tag color bar — splits vertically per tag */}
       {ideaTags.length > 0 && (
         <div
@@ -295,7 +320,7 @@ export function IdeaNode({ idea }: Props) {
       )}
 
       {/* Label row: IDEA + description indicator + date */}
-      <div
+      {!isChipMode && <div
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -322,13 +347,13 @@ export function IdeaNode({ idea }: Props) {
           </span>
         )}
         <span>{formatDate(idea.createdAt)}</span>
-      </div>
+      </div>}
 
       {/* Separator */}
-      <div style={{ height: 1, background: "var(--border-subtle)" }} />
+      {!isChipMode && <div style={{ height: 1, background: "var(--border-subtle)" }} />}
 
       {/* AI Tags */}
-      {ideaAiTags.length > 0 && (
+      {!isChipMode && ideaAiTags.length > 0 && (
         <div
           style={{
             padding: "4px 14px 8px",
@@ -380,20 +405,22 @@ export function IdeaNode({ idea }: Props) {
       )}
 
       {/* Content */}
-      <div
-        style={{
-          padding: "8px 14px 12px",
-          whiteSpace: hasCustomSize ? "normal" : undefined,
-          display: hasCustomSize ? undefined : "-webkit-box",
-          WebkitLineClamp: hasCustomSize ? undefined : 4,
-          WebkitBoxOrient: hasCustomSize ? undefined : "vertical",
-          overflow: "hidden",
-          textOverflow: hasCustomSize ? undefined : "ellipsis",
-          wordBreak: "break-word",
-        }}
-      >
-        {displayText}
-      </div>
+      {!isChipMode && (
+        <div
+          style={{
+            padding: "8px 14px 12px",
+            whiteSpace: hasCustomSize ? "normal" : undefined,
+            display: hasCustomSize ? undefined : "-webkit-box",
+            WebkitLineClamp: hasCustomSize ? undefined : 4,
+            WebkitBoxOrient: hasCustomSize ? undefined : "vertical",
+            overflow: "hidden",
+            textOverflow: hasCustomSize ? undefined : "ellipsis",
+            wordBreak: "break-word",
+          }}
+        >
+          {displayText}
+        </div>
+      )}
 
       {/* Plop ripple — square for grid aesthetic */}
       {entering && (

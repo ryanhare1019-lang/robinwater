@@ -3002,6 +3002,7 @@ dependencies = [
 name = "robinwater"
 version = "1.0.1"
 dependencies = [
+ "reqwest 0.12.28",
  "serde",
  "serde_json",
  "tauri",
