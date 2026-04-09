@@ -7,6 +7,8 @@ import { CanvasList } from "./components/CanvasList";
 import { ContextMenu } from "./components/ContextMenu";
 import { ConnectingLine } from "./components/ConnectingLine";
 import { UpdateModal } from "./components/UpdateModal";
+import { NodeHoverPreview } from "./components/NodeHoverPreview";
+import { ZoomIndicator } from "./components/ZoomIndicator";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
 import { loadConfig } from "./utils/config";
@@ -179,6 +181,8 @@ export function App() {
       </div>
       <ConnectingLine />
       <ContextMenu />
+      <NodeHoverPreview />
+      <ZoomIndicator />
       {selectedId && <RightSidebar />}
     </>
   );
