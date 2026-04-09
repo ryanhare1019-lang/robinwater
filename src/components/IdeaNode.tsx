@@ -48,7 +48,6 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.aiTagDefinitions || EMPTY_AI_TAG_DEFS;
   });
-  const removeAiTagFromIdea = useStore((s) => s.removeAiTagFromIdea);
   const isFlashing = useStore((s) => s.tagJustTagged.includes(idea.id));
 
   const isSearchActive = useStore(
@@ -355,9 +354,6 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
 
   const hasDescription = Boolean(idea.description && idea.description.trim().length > 0);
 
-  // Hidden nodes (collapsed into their hub) render nothing
-  if (isHidden) return null;
-
   return (
     <div
       ref={nodeRef}
@@ -415,16 +411,21 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
         cursor: isConnecting ? "crosshair" : "default",
         userSelect: "none",
         overflow: "hidden",
-        transform: isDeleting
+        transform: isHidden
+          ? "scale(0.3)"
+          : isDeleting
           ? "scale(0)"
           : isDragging
           ? "scale(1.03)"
           : "scale(1)",
-        opacity: isDeleting ? 0 : isSearchActive && !matchesSearch ? 0.15 : 1,
+        opacity: isHidden ? 0 : (isDeleting ? 0 : isSearchActive && !matchesSearch ? 0.15 : 1),
+        pointerEvents: isHidden ? "none" : "auto",
         transition: isDeleting
           ? "transform 0.25s ease-in, opacity 0.25s ease-in"
           : isDragging
           ? "transform 0.15s ease"
+          : isHidden
+          ? "opacity 0.18s ease, transform 0.18s ease"
           : "border-color 0.2s ease, transform 0.15s var(--ease-out), opacity 0.15s ease, min-width 0.15s ease, max-width 0.15s ease",
         animation: entering
           ? "node-enter 0.45s var(--ease-spring) forwards, creation-glow 2.5s ease-out forwards"
@@ -532,54 +533,6 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
           transition: "max-height 0.15s ease, opacity 0.12s ease",
         }}
       />
-
-      {/* AI Tags — full level only */}
-      {ideaAiTags.length > 0 && (
-        <div
-          style={{
-            padding: "4px 14px 8px",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "4px",
-            maxHeight: detailLevel === 'full' ? '120px' : '0px',
-            opacity: detailLevel === 'full' ? 1 : 0,
-            overflow: "hidden",
-            transition: "max-height 0.15s ease, opacity 0.12s ease",
-          }}
-        >
-          {ideaAiTags.map((tagDef) => (
-            <span
-              key={tagDef.id}
-              style={{
-                fontSize: "9px",
-                fontFamily: "monospace",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                padding: "2px 4px 2px 6px",
-                border: `1px solid ${tagDef.color}40`,
-                background: `${tagDef.color}1F`,
-                color: `${tagDef.color}B3`,
-                borderRadius: 0,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              {tagDef.label}
-              {isHovered && (
-                <span
-                  onMouseDown={(e) => { e.stopPropagation(); removeAiTagFromIdea(tagDef.id, idea.id); }}
-                  style={{ cursor: "pointer", opacity: 0.5, lineHeight: 1, fontSize: "10px" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
-                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
-                >
-                  ×
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
-      )}
 
       {/* Content */}
       <div
