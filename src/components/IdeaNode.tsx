@@ -358,7 +358,17 @@ export function IdeaNode({ idea }: Props) {
       >
         <span>IDEA</span>
         {hasDescription && (
-          <span style={{ color: "var(--text-secondary)", fontSize: "10px", opacity: 0.5, lineHeight: 1 }}>·</span>
+          <svg
+            width="10"
+            height="8"
+            viewBox="0 0 10 8"
+            style={{ opacity: 0.45, flexShrink: 0 }}
+            aria-label="has description"
+          >
+            <rect x="0" y="0" width="10" height="1.5" fill="var(--text-secondary)" />
+            <rect x="0" y="3.25" width="8" height="1.5" fill="var(--text-secondary)" />
+            <rect x="0" y="6.5" width="6" height="1.5" fill="var(--text-secondary)" />
+          </svg>
         )}
         <span>{formatDate(idea.createdAt)}</span>
       </div>
