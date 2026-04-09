@@ -99,17 +99,23 @@ export function Canvas() {
           const minCanvasY = (minClientY - vp.y) / vp.zoom;
           const maxCanvasY = (maxClientY - vp.y) / vp.zoom;
 
-          // Find all ideas whose origin falls within the rect
+          // Find all ideas whose bounding box overlaps the selection rect
+          const NODE_DEFAULT_W = 200;
+          const NODE_DEFAULT_H = 80;
           const state = useStore.getState();
           const activeCanvas = state.canvases.find((c) => c.id === state.activeCanvasId);
           const hitIds = (activeCanvas?.ideas || [])
-            .filter(
-              (idea) =>
-                idea.x >= minCanvasX &&
-                idea.x <= maxCanvasX &&
-                idea.y >= minCanvasY &&
-                idea.y <= maxCanvasY
-            )
+            .filter((idea) => {
+              const nodeW = idea.width || NODE_DEFAULT_W;
+              const nodeH = idea.height || NODE_DEFAULT_H;
+              // Check if node rect overlaps selection rect
+              return (
+                idea.x < maxCanvasX &&
+                idea.x + nodeW > minCanvasX &&
+                idea.y < maxCanvasY &&
+                idea.y + nodeH > minCanvasY
+              );
+            })
             .map((idea) => idea.id);
 
           if (hitIds.length > 0) {
@@ -242,7 +248,7 @@ export function Canvas() {
         }
         // Also clear multi-selection on Escape
         const state = useStore.getState();
-        if (state.selectedIds.length > 1) {
+        if (state.selectedIds.length > 0) {
           clearSelection();
         }
       }
