@@ -21,6 +21,8 @@ export function Canvas() {
   const setConnectingFrom = useStore((s) => s.setConnectingFrom);
   const deleteIdea = useStore((s) => s.deleteIdea);
   const setDeletingNodeId = useStore((s) => s.setDeletingNodeId);
+  const setSelectedIds = useStore((s) => s.setSelectedIds);
+  const clearSelection = useStore((s) => s.clearSelection);
 
   const ghostNodes = useStore((s) => s.ghostNodes);
   const canvas = canvases.find((c) => c.id === activeCanvasId);
@@ -35,6 +37,9 @@ export function Canvas() {
   // Delete confirmation state
   const [deleteConfirmPending, setDeleteConfirmPending] = useState(false);
   const deleteConfirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Drag-select box state
+  const [selectBox, setSelectBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   const applyTransform = useCallback((x: number, y: number, zoom: number) => {
     if (transformRef.current) {
@@ -60,6 +65,63 @@ export function Canvas() {
         return;
       }
 
+      if (e.button === 0 && e.shiftKey) {
+        // Shift+drag on empty canvas — start drag-select box
+        const startClientX = e.clientX;
+        const startClientY = e.clientY;
+        setSelectBox({ x: startClientX, y: startClientY, w: 0, h: 0 });
+
+        const onMove = (ev: MouseEvent) => {
+          const w = ev.clientX - startClientX;
+          const h = ev.clientY - startClientY;
+          setSelectBox({ x: startClientX, y: startClientY, w, h });
+        };
+
+        const onUp = (ev: MouseEvent) => {
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+          setSelectBox(null);
+
+          // Compute selection rect in client coords (normalized)
+          const rawX = startClientX;
+          const rawY = startClientY;
+          const rawW = ev.clientX - startClientX;
+          const rawH = ev.clientY - startClientY;
+          const minClientX = rawW >= 0 ? rawX : rawX + rawW;
+          const maxClientX = rawW >= 0 ? rawX + rawW : rawX;
+          const minClientY = rawH >= 0 ? rawY : rawY + rawH;
+          const maxClientY = rawH >= 0 ? rawY + rawH : rawY;
+
+          // Convert to canvas coordinates
+          const vp = viewportRef.current;
+          const minCanvasX = (minClientX - vp.x) / vp.zoom;
+          const maxCanvasX = (maxClientX - vp.x) / vp.zoom;
+          const minCanvasY = (minClientY - vp.y) / vp.zoom;
+          const maxCanvasY = (maxClientY - vp.y) / vp.zoom;
+
+          // Find all ideas whose origin falls within the rect
+          const state = useStore.getState();
+          const activeCanvas = state.canvases.find((c) => c.id === state.activeCanvasId);
+          const hitIds = (activeCanvas?.ideas || [])
+            .filter(
+              (idea) =>
+                idea.x >= minCanvasX &&
+                idea.x <= maxCanvasX &&
+                idea.y >= minCanvasY &&
+                idea.y <= maxCanvasY
+            )
+            .map((idea) => idea.id);
+
+          if (hitIds.length > 0) {
+            setSelectedIds(hitIds);
+          }
+        };
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+        return;
+      }
+
       if (e.button === 0 || e.button === 1) {
         panning.current = true;
         setIsPanning(true);
@@ -73,7 +135,7 @@ export function Canvas() {
         setContextMenu(null, null);
       }
     },
-    [setSelectedId, connectingFrom, setConnectingFrom, setContextMenu]
+    [setSelectedId, connectingFrom, setConnectingFrom, setContextMenu, setSelectedIds]
   );
 
   useEffect(() => {
@@ -173,9 +235,16 @@ export function Canvas() {
         }
       }
 
-      if (e.key === "Escape" && deleteConfirmPending) {
-        e.preventDefault();
-        cancelDeleteConfirm();
+      if (e.key === "Escape") {
+        if (deleteConfirmPending) {
+          e.preventDefault();
+          cancelDeleteConfirm();
+        }
+        // Also clear multi-selection on Escape
+        const state = useStore.getState();
+        if (state.selectedIds.length > 1) {
+          clearSelection();
+        }
       }
 
       if (e.ctrlKey && e.key === "0") {
@@ -229,7 +298,7 @@ export function Canvas() {
       window.removeEventListener("keydown", handleKeyDown);
       if (deleteConfirmTimer.current) clearTimeout(deleteConfirmTimer.current);
     };
-  }, [selectedId, deleteConfirmPending, setViewport, deleteIdea, setDeletingNodeId, setSelectedId, cancelDeleteConfirm, ideas]);
+  }, [selectedId, deleteConfirmPending, setViewport, deleteIdea, setDeletingNodeId, setSelectedId, cancelDeleteConfirm, clearSelection, ideas]);
 
   return (
     <>
@@ -290,6 +359,21 @@ export function Canvas() {
         >
           DELETE?&nbsp;&nbsp;[DELETE] confirm&nbsp;&nbsp;[ESC] cancel
         </div>
+      )}
+      {selectBox && (
+        <div
+          style={{
+            position: "fixed",
+            left: selectBox.w >= 0 ? selectBox.x : selectBox.x + selectBox.w,
+            top: selectBox.h >= 0 ? selectBox.y : selectBox.y + selectBox.h,
+            width: Math.abs(selectBox.w),
+            height: Math.abs(selectBox.h),
+            border: "1px dashed var(--accent-blue)",
+            background: "rgba(107, 155, 255, 0.06)",
+            pointerEvents: "none",
+            zIndex: 1500,
+          }}
+        />
       )}
     </>
   );

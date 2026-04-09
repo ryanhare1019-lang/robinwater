@@ -29,6 +29,7 @@ interface AppState {
 
   // UI state
   selectedId: string | null;
+  selectedIds: string[];
   newNodeId: string | null;
   similarityLines: SimilarityLine[];
   leftSidebarOpen: boolean;
@@ -36,6 +37,12 @@ interface AppState {
   contextMenuNodeId: string | null;
   contextMenuPos: { x: number; y: number } | null;
   deletingNodeId: string | null; // for exit animation
+
+  // Multi-select actions
+  addToSelection: (id: string) => void;
+  removeFromSelection: (id: string) => void;
+  setSelectedIds: (ids: string[]) => void;
+  clearSelection: () => void;
 
   // Actions
   addIdea: (text: string) => void;
@@ -145,6 +152,7 @@ export const useStore = create<AppState>((set, get) => {
     activeCanvasId: defaultCanvas.id,
     config: null,
     selectedId: null,
+    selectedIds: [],
     newNodeId: null,
     similarityLines: [],
     leftSidebarOpen: false,
@@ -299,8 +307,18 @@ export const useStore = create<AppState>((set, get) => {
       });
     },
 
-    setSelectedId: (id) => set({ selectedId: id }),
+    setSelectedId: (id) => set({ selectedId: id, selectedIds: id ? [id] : [] }),
     clearNewNode: () => set({ newNodeId: null }),
+
+    addToSelection: (id) => set((state) => ({
+      selectedIds: state.selectedIds.includes(id) ? state.selectedIds : [...state.selectedIds, id],
+    })),
+    removeFromSelection: (id) => set((state) => ({
+      selectedIds: state.selectedIds.filter((s) => s !== id),
+      selectedId: state.selectedId === id ? (state.selectedIds.filter((s) => s !== id)[0] ?? null) : state.selectedId,
+    })),
+    setSelectedIds: (ids) => set({ selectedIds: ids, selectedId: ids[ids.length - 1] ?? null }),
+    clearSelection: () => set({ selectedIds: [], selectedId: null }),
 
     hydrate: (data) => {
       const active = data.canvases.find((c) => c.id === data.activeCanvasId) || data.canvases[0];
@@ -326,6 +344,7 @@ export const useStore = create<AppState>((set, get) => {
         canvases: [...state.canvases, canvas],
         activeCanvasId: canvas.id,
         selectedId: null,
+        selectedIds: [],
         newNodeId: null,
         similarityLines: [],
       }));
@@ -338,6 +357,7 @@ export const useStore = create<AppState>((set, get) => {
         set({
           activeCanvasId: id,
           selectedId: null,
+          selectedIds: [],
           newNodeId: null,
           connectingFrom: null,
           similarityLines: computeSimilarityLines(canvas.ideas, canvas.connections),
@@ -364,6 +384,7 @@ export const useStore = create<AppState>((set, get) => {
         canvases: remaining,
         activeCanvasId: newActive,
         selectedId: null,
+        selectedIds: [],
         similarityLines: computeSimilarityLines(newActiveCanvas.ideas, newActiveCanvas.connections),
       });
     },

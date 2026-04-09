@@ -20,10 +20,13 @@ function formatDate(iso: string): string {
 
 export function IdeaNode({ idea }: Props) {
   const selectedId = useStore((s) => s.selectedId);
+  const selectedIds = useStore((s) => s.selectedIds);
   const newNodeId = useStore((s) => s.newNodeId);
   const deletingNodeId = useStore((s) => s.deletingNodeId);
   const connectingFrom = useStore((s) => s.connectingFrom);
   const setSelectedId = useStore((s) => s.setSelectedId);
+  const addToSelection = useStore((s) => s.addToSelection);
+  const removeFromSelection = useStore((s) => s.removeFromSelection);
   const updateIdea = useStore((s) => s.updateIdea);
   const clearNewNode = useStore((s) => s.clearNewNode);
   const setContextMenu = useStore((s) => s.setContextMenu);
@@ -110,6 +113,7 @@ export function IdeaNode({ idea }: Props) {
   detailLevelRef.current = detailLevel;
 
   const isSelected = selectedId === idea.id;
+  const isMultiSelected = selectedIds.includes(idea.id) && selectedIds.length > 1;
   const isNew = newNodeId === idea.id;
   const isDeleting = deletingNodeId === idea.id;
   const isConnecting = connectingFrom !== null;
@@ -166,27 +170,65 @@ export function IdeaNode({ idea }: Props) {
       }
       const startX = e.clientX;
       const startY = e.clientY;
-      const ideaX = idea.x;
-      const ideaY = idea.y;
       const zoom = getActiveViewport().zoom;
 
-      const onMove = (ev: MouseEvent) => {
-        if (!dragging.current) return;
-        const dx = (ev.clientX - startX) / zoom;
-        const dy = (ev.clientY - startY) / zoom;
-        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMove.current = true;
-        updateIdea(idea.id, { x: ideaX + dx, y: ideaY + dy });
-      };
+      // Check if this is a group drag (node is part of multi-selection)
+      const currentSelectedIds = useStore.getState().selectedIds;
+      const isGroupDrag = currentSelectedIds.includes(idea.id) && currentSelectedIds.length > 1;
 
-      const onUp = () => {
-        dragging.current = false;
-        setIsDragging(false);
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
-      };
+      if (isGroupDrag) {
+        // Snapshot all selected nodes' positions at drag start
+        const activeCanvas = useStore.getState().canvases.find(
+          (c) => c.id === useStore.getState().activeCanvasId
+        );
+        const startPositions = new Map<string, { x: number; y: number }>();
+        for (const id of currentSelectedIds) {
+          const i = activeCanvas?.ideas.find((n) => n.id === id);
+          if (i) startPositions.set(id, { x: i.x, y: i.y });
+        }
 
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
+        const onMove = (ev: MouseEvent) => {
+          if (!dragging.current) return;
+          const dx = (ev.clientX - startX) / zoom;
+          const dy = (ev.clientY - startY) / zoom;
+          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMove.current = true;
+          for (const [id, pos] of startPositions) {
+            updateIdea(id, { x: pos.x + dx, y: pos.y + dy });
+          }
+        };
+
+        const onUp = () => {
+          dragging.current = false;
+          setIsDragging(false);
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      } else {
+        // Single drag (existing behavior)
+        const ideaX = idea.x;
+        const ideaY = idea.y;
+
+        const onMove = (ev: MouseEvent) => {
+          if (!dragging.current) return;
+          const dx = (ev.clientX - startX) / zoom;
+          const dy = (ev.clientY - startY) / zoom;
+          if (Math.abs(dx) > 3 || Math.abs(dy) > 3) didMove.current = true;
+          updateIdea(idea.id, { x: ideaX + dx, y: ideaY + dy });
+        };
+
+        const onUp = () => {
+          dragging.current = false;
+          setIsDragging(false);
+          window.removeEventListener("mousemove", onMove);
+          window.removeEventListener("mouseup", onUp);
+        };
+
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+      }
     },
     [idea.id, idea.x, idea.y, updateIdea, connectingFrom, addConnection, setConnectingFrom, setHoverPreview]
   );
@@ -207,10 +249,22 @@ export function IdeaNode({ idea }: Props) {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!didMove.current && !connectingFrom) {
-        setSelectedId(idea.id);
+        if (e.shiftKey) {
+          // Toggle this idea in/out of multi-selection
+          if (useStore.getState().selectedIds.includes(idea.id)) {
+            removeFromSelection(idea.id);
+          } else {
+            addToSelection(idea.id);
+            // Also update selectedId to last clicked (for sidebar etc)
+            useStore.setState({ selectedId: idea.id });
+          }
+        } else {
+          // Normal click — single select (also resets selectedIds to [id])
+          setSelectedId(idea.id);
+        }
       }
     },
-    [idea.id, setSelectedId, connectingFrom]
+    [idea.id, setSelectedId, addToSelection, removeFromSelection, connectingFrom]
   );
 
   const onContextMenu = useCallback(
@@ -287,6 +341,8 @@ export function IdeaNode({ idea }: Props) {
     ? "var(--border-strong)"
     : isSelected
     ? "var(--border-focus)"
+    : isMultiSelected
+    ? "var(--accent-blue)"
     : isDeleting
     ? "transparent"
     : isHovered
@@ -335,10 +391,12 @@ export function IdeaNode({ idea }: Props) {
         maxWidth: (idea.width !== undefined || idea.height !== undefined)
           ? undefined
           : detailLevel === 'full' ? 340 : detailLevel === 'compact' ? 280 : 200,
-        background: "var(--bg-surface)",
+        background: isMultiSelected ? "rgba(107, 155, 255, 0.05)" : "var(--bg-surface)",
         border: `1px solid ${borderColor}`,
         borderLeft: isSelected
           ? `3px solid var(--text-secondary)`
+          : isMultiSelected
+          ? `3px solid var(--accent-blue)`
           : `1px solid ${borderColor}`,
         borderRadius: 0,
         color: "var(--text-primary)",
@@ -365,7 +423,7 @@ export function IdeaNode({ idea }: Props) {
           ? "node-enter 0.45s var(--ease-spring) forwards, creation-glow 2.5s ease-out forwards"
           : undefined,
         willChange: "transform, opacity",
-        zIndex: isDragging ? 100 : isSelected ? 10 : 1,
+        zIndex: isDragging ? 100 : isSelected ? 10 : isMultiSelected ? 5 : 1,
       }}
     >
       {/* Tag color bar — splits vertically per tag */}
