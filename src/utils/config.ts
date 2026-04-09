@@ -3,6 +3,7 @@ import { readTextFile, writeTextFile, exists, mkdir } from '@tauri-apps/plugin-f
 
 export interface AppConfig {
   anthropicApiKey: string;
+  theme: 'auto' | 'dark' | 'light';
   aiFeatures: {
     ghostNodes: boolean;
     autoTagging: boolean;
@@ -12,6 +13,7 @@ export interface AppConfig {
 
 const DEFAULT_CONFIG: AppConfig = {
   anthropicApiKey: '',
+  theme: 'auto',
   aiFeatures: {
     ghostNodes: true,
     autoTagging: true,

@@ -10,14 +10,26 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
   const [apiKey, setApiKey] = useState(initialConfig.anthropicApiKey);
   const [showKey, setShowKey] = useState(false);
   const [features, setFeatures] = useState({ ...initialConfig.aiFeatures });
+  const [theme, setTheme] = useState<'auto' | 'dark' | 'light'>(initialConfig.theme ?? 'auto');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleThemeSelect = (t: 'auto' | 'dark' | 'light') => {
+    setTheme(t);
+    // Apply immediately so user sees the effect before saving
+    if (t === 'auto') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    } else {
+      document.documentElement.setAttribute('data-theme', t);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
     setError(null);
     try {
-      await saveConfig({ anthropicApiKey: apiKey, aiFeatures: features });
+      await saveConfig({ anthropicApiKey: apiKey, theme, aiFeatures: features });
       setSaving(false);
       onClose();
     } catch (e) {
@@ -238,6 +250,39 @@ export function SettingsModal({ onClose, initialConfig }: Props) {
                 </span>
               </div>
             ))}
+          </div>
+
+          {/* Theme section */}
+          <div style={{ marginBottom: 22 }}>
+            <span style={sectionLabelStyle}>THEME</span>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['auto', 'dark', 'light'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => handleThemeSelect(t)}
+                  style={{
+                    ...btnStyle,
+                    borderColor: theme === t ? '#444444' : '#1A1A1A',
+                    color: theme === t ? '#AAAAAA' : '#444444',
+                    flex: 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (theme !== t) {
+                      e.currentTarget.style.borderColor = '#333333';
+                      e.currentTarget.style.color = '#666666';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (theme !== t) {
+                      e.currentTarget.style.borderColor = '#1A1A1A';
+                      e.currentTarget.style.color = '#444444';
+                    }
+                  }}
+                >
+                  {t.toUpperCase()}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Save error */}

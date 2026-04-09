@@ -88,12 +88,22 @@ async function saveData(data: AppData): Promise<void> {
 
 const AUTO_TRIGGER_DELAY_MS = 3_000;
 
+function applyTheme(theme: 'auto' | 'dark' | 'light') {
+  if (theme === 'auto') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+}
+
 export function App() {
   const selectedId = useStore((s) => s.selectedId);
   const lastAddedAt = useStore((s) => s.lastAddedAt);
   const rightOffset = selectedId ? 320 + 24 : 24;
   const newNodeId = useStore((s) => s.newNodeId);
   const aiPanelOpen = useStore((s) => s.aiPanelOpen);
+  const config = useStore((s) => s.config);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const autoTriggerTimer = useRef<ReturnType<typeof setTimeout>>();
   const newestIdeaTextRef = useRef<string>('');
@@ -107,6 +117,7 @@ export function App() {
     });
     loadConfig().then((config) => {
       useStore.getState().setConfig(config);
+      applyTheme(config.theme);
     });
     // Check for updates a moment after launch (silent if offline)
     setTimeout(() => {
@@ -115,6 +126,23 @@ export function App() {
       });
     }, 2000);
   }, []);
+
+  // Re-apply theme whenever config.theme changes
+  useEffect(() => {
+    if (!config?.theme) return;
+    applyTheme(config.theme);
+  }, [config?.theme]);
+
+  // Listen for system preference changes when in auto mode
+  useEffect(() => {
+    if (config?.theme !== 'auto') return;
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [config?.theme]);
 
   useEffect(() => {
     const unsub = useStore.subscribe(() => {
