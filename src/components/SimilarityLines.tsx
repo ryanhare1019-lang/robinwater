@@ -7,6 +7,10 @@ export function SimilarityLines() {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.ideas ?? [];
   });
+  const zoom = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.viewport.zoom ?? 1;
+  });
   const prevKeysRef = useRef<Set<string>>(new Set());
 
   const currentKeys = new Set(lines.map((l) => `${l.fromId}-${l.toId}`));
@@ -20,6 +24,9 @@ export function SimilarityLines() {
   });
 
   if (lines.length === 0) return null;
+
+  // Similarity lines are too subtle to be useful at very low zoom
+  if (zoom < 0.3) return null;
 
   const ideasById = new Map(ideas.map((i) => [i.id, i]));
 

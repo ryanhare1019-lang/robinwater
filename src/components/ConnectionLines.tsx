@@ -25,6 +25,10 @@ export function ConnectionLines() {
   const canvases = useStore((s) => s.canvases);
   const activeCanvasId = useStore((s) => s.activeCanvasId);
   const removeConnection = useStore((s) => s.removeConnection);
+  const zoom = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.viewport.zoom ?? 1;
+  });
 
   const canvas = canvases.find((c) => c.id === activeCanvasId);
   const ideas = canvas?.ideas || [];
@@ -75,8 +79,8 @@ export function ConnectionLines() {
               d={d}
               fill="none"
               stroke="var(--text-primary)"
-              strokeWidth={1}
-              opacity={0.45}
+              strokeWidth={zoom < 0.2 ? 1.5 : 1}
+              opacity={zoom < 0.5 ? 0.6 : 0.45}
               style={{ pointerEvents: "none" }}
             />
           </g>
