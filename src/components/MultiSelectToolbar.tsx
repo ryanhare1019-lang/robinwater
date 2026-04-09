@@ -14,17 +14,21 @@ export function MultiSelectToolbar() {
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const tagBtnRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // close dropdown on outside click
   useEffect(() => {
     if (!tagDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (tagBtnRef.current && !tagBtnRef.current.closest("[data-tag-dropdown]")?.contains(e.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        !tagBtnRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) {
         setTagDropdownOpen(false);
       }
     };
-    window.addEventListener("mousedown", handler);
-    return () => window.removeEventListener("mousedown", handler);
+    window.addEventListener("mousedown", handleClickOutside);
+    return () => window.removeEventListener("mousedown", handleClickOutside);
   }, [tagDropdownOpen]);
 
   // reset confirm state when selection changes
@@ -38,12 +42,17 @@ export function MultiSelectToolbar() {
   const count = selectedIds.length;
 
   const handleApplyTag = (tagId: string) => {
+    const selectedIds = useStore.getState().selectedIds;
     for (const id of selectedIds) {
-      const idea = canvas.ideas.find((i) => i.id === id);
+      // Read fresh state inside loop to avoid stale closure
+      const freshCanvas = useStore.getState().canvases.find(
+        c => c.id === useStore.getState().activeCanvasId
+      );
+      const idea = freshCanvas?.ideas.find(i => i.id === id);
       if (!idea) continue;
       const existingTags = idea.tags || [];
       if (existingTags.includes(tagId)) continue;
-      updateIdea(id, { tags: [...existingTags, tagId] });
+      useStore.getState().updateIdea(id, { tags: [...existingTags, tagId] });
     }
     setTagDropdownOpen(false);
   };
@@ -122,6 +131,7 @@ export function MultiSelectToolbar() {
 
         {tagDropdownOpen && (
           <div
+            ref={dropdownRef}
             style={{
               position: "absolute",
               bottom: "calc(100% + 4px)",
