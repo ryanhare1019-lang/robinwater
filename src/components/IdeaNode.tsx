@@ -29,6 +29,8 @@ export function IdeaNode({ idea }: Props) {
   const setContextMenu = useStore((s) => s.setContextMenu);
   const addConnection = useStore((s) => s.addConnection);
   const setConnectingFrom = useStore((s) => s.setConnectingFrom);
+  const setHoverPreview = useStore((s) => s.setHoverPreview);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canvasTags = useStore((s) => {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
@@ -73,6 +75,12 @@ export function IdeaNode({ idea }: Props) {
     }
   }, [isNew, clearNewNode]);
 
+  useEffect(() => {
+    return () => {
+      if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    };
+  }, []);
+
   const onMouseDown = useCallback(
     (e: React.MouseEvent) => {
       // Handle right-click: start connect mode
@@ -94,6 +102,11 @@ export function IdeaNode({ idea }: Props) {
       dragging.current = true;
       didMove.current = false;
       setIsDragging(true);
+      setHoverPreview(null);
+      if (hoverTimer.current) {
+        clearTimeout(hoverTimer.current);
+        hoverTimer.current = null;
+      }
       const startX = e.clientX;
       const startY = e.clientY;
       const ideaX = idea.x;
@@ -118,7 +131,7 @@ export function IdeaNode({ idea }: Props) {
       window.addEventListener("mousemove", onMove);
       window.addEventListener("mouseup", onUp);
     },
-    [idea.id, idea.x, idea.y, updateIdea, connectingFrom, addConnection, setConnectingFrom]
+    [idea.id, idea.x, idea.y, updateIdea, connectingFrom, addConnection, setConnectingFrom, setHoverPreview]
   );
 
   const onMouseUp = useCallback(
@@ -232,8 +245,29 @@ export function IdeaNode({ idea }: Props) {
       onMouseUp={onMouseUp}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      onMouseEnter={() => { if (!entering && !isDragging && !isDeleting) setIsHovered(true); }}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => {
+          if (entering || isDragging || isDeleting) return;
+          setIsHovered(true);
+          // Schedule hover preview — only at compact/minimal zoom, not in connect mode
+          if (detailLevelRef.current !== 'full' && !connectingFrom && nodeRef.current) {
+            const capturedRef = nodeRef.current;
+            hoverTimer.current = setTimeout(() => {
+              const rect = capturedRef.getBoundingClientRect();
+              setHoverPreview({
+                nodeId: idea.id,
+                rect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+              });
+            }, 300);
+          }
+        }}
+      onMouseLeave={() => {
+          setIsHovered(false);
+          if (hoverTimer.current) {
+            clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+          }
+          setHoverPreview(null);
+        }}
       style={{
         position: "absolute",
         left: idea.x,
