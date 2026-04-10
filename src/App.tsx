@@ -38,18 +38,42 @@ function migrateV1(data: LegacyAppData): AppData {
 
 async function loadData(): Promise<AppData | null> {
   try {
-    const { appDataDir, join } = await import("@tauri-apps/api/path");
+    const { appDataDir, join, dirname } = await import("@tauri-apps/api/path");
     const { readTextFile, exists, mkdir } = await import("@tauri-apps/plugin-fs");
     const dir = await appDataDir();
     await mkdir(dir, { recursive: true }).catch(() => {});
     const filePath = await join(dir, DATA_FILE);
+
+    let rawContent: string | null = null;
+    let migratedFromOld = false;
+
     if (await exists(filePath)) {
-      const content = await readTextFile(filePath);
+      rawContent = await readTextFile(filePath);
+    } else {
+      // Migrate from old com.robinwater.desktop location (one-time migration)
+      try {
+        const parentDir = await dirname(dir);
+        const oldFilePath = await join(parentDir, "com.robinwater.desktop", "robinwater-data.json");
+        if (await exists(oldFilePath)) {
+          rawContent = await readTextFile(oldFilePath);
+          migratedFromOld = true;
+        }
+      } catch {
+        // old data not present, start fresh
+      }
+    }
+
+    if (!rawContent) return null;
+
+    {
+      const content = rawContent;
       const parsed = JSON.parse(content);
 
       // Migrate v1 format
       if (parsed.ideas && !parsed.canvases) {
-        return migrateV1(parsed as LegacyAppData);
+        const migrated = migrateV1(parsed as LegacyAppData);
+        if (migratedFromOld) await saveData(migrated);
+        return migrated;
       }
 
       // Ensure connections array exists on all canvases + migrate color→tags
@@ -72,6 +96,7 @@ async function loadData(): Promise<AppData | null> {
           return normalized;
         }),
       }));
+      if (migratedFromOld) await saveData(data);
       return data;
     }
   } catch (e) {
