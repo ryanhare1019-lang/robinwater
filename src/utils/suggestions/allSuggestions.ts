@@ -131,19 +131,19 @@ function parseResponse(raw: string): AllResults {
 
   const extensions = Array.isArray(parsed.extensions)
     ? parsed.extensions
-        .filter((s) => typeof s.text === 'string' && typeof s.relatedTo === 'string')
+        .filter((s) => typeof s.text === 'string' && typeof s.relatedTo === 'string' && typeof s.reasoning === 'string')
         .slice(0, 2)
     : [];
 
   const synthesis = Array.isArray(parsed.synthesis)
     ? parsed.synthesis
-        .filter((s) => typeof s.text === 'string' && Array.isArray(s.bridgedGroups))
+        .filter((s) => typeof s.text === 'string' && Array.isArray(s.bridgedGroups) && typeof s.reasoning === 'string')
         .slice(0, 1)
     : [];
 
   const wildcards = Array.isArray(parsed.wildcards)
     ? parsed.wildcards
-        .filter((s) => typeof s.text === 'string' && typeof s.inspiration === 'string')
+        .filter((s) => typeof s.text === 'string' && typeof s.inspiration === 'string' && typeof s.reasoning === 'string')
         .slice(0, 1)
     : [];
 
