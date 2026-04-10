@@ -23,6 +23,24 @@ function isNewer(remote: string, current: string): boolean {
   return rP > cP;
 }
 
+/** Returns asset name substrings to match, in priority order, for the current platform. */
+function getAssetCandidates(): string[] {
+  const ua = navigator.userAgent;
+  if (ua.includes("Windows")) {
+    return ["_x64-setup.exe", "_x64_en-US.msi"];
+  }
+  if (ua.includes("Macintosh") || ua.includes("Mac OS")) {
+    // Check for Apple Silicon via the newer userAgentData API when available
+    const isArm =
+      ua.toLowerCase().includes("arm") ||
+      ((navigator as any).userAgentData?.platform === "macOS" &&
+        (navigator as any).userAgentData?.architecture === "arm");
+    return isArm ? ["_aarch64.dmg", "_x64.dmg"] : ["_x64.dmg", "_aarch64.dmg"];
+  }
+  // Linux
+  return ["_amd64.AppImage", "_amd64.deb"];
+}
+
 /**
  * Checks GitHub for a newer release. Returns null if up to date or offline.
  * Never throws — any network error is treated as "no update available".
@@ -51,12 +69,13 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
 
     if (!isNewer(release.tag_name, currentVersion)) return null;
 
-    // Prefer NSIS setup, fall back to MSI
-    const asset = release.assets.find(
-      (a) =>
-        a.name.includes("_x64-setup.exe") ||
-        a.name.includes("_x64_en-US.msi")
-    );
+    // Pick the first matching asset for this platform
+    const candidates = getAssetCandidates();
+    let asset: { name: string; browser_download_url: string } | undefined;
+    for (const candidate of candidates) {
+      asset = release.assets.find((a) => a.name.includes(candidate));
+      if (asset) break;
+    }
     if (!asset) return null;
 
     return {

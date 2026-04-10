@@ -57,6 +57,7 @@ async function loadData(): Promise<AppData | null> {
       data.canvases = data.canvases.map((c) => ({
         ...c,
         connections: c.connections || [],
+        collapsedHubs: c.collapsedHubs || [],
         ideas: c.ideas.map((idea: any) => {
           let normalized = idea;
           // Migrate legacy color→tags format

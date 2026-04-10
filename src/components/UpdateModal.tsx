@@ -101,8 +101,8 @@ export function UpdateModal({ update, onDismiss }: Props) {
               marginBottom: 20,
             }}
           >
-            You're on v{update.currentVersion}. The app will close and restart
-            after installing.
+            You're on v{update.currentVersion}. The app will close, update
+            silently, and reopen automatically.
           </div>
 
           {status === "error" && errorMsg && (

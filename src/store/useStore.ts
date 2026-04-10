@@ -49,6 +49,7 @@ function createDefaultCanvas(name = "Ideas"): Canvas {
     viewport: { x: 0, y: 0, zoom: 1 },
     tags: [],
     aiTagDefinitions: [],
+    collapsedHubs: [],
   };
 }
 

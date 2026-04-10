@@ -2,13 +2,14 @@ import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { IdeaNode } from "./IdeaNode";
 import { GhostNodeCard } from "./GhostNodeCard";
-import { SimilarityCanvas } from "./SimilarityCanvas";
+import { SimilarityLines } from "./SimilarityLines";
 import { ConnectionLines } from "./ConnectionLines";
 import { Background } from "./Background";
 import { Particles } from "./Particles";
 
 const ZOOM_MIN = 0.15;
 const ZOOM_MAX = 4.0;
+const EMPTY_HUBS: string[] = [];
 
 export function Canvas() {
   const activeCanvasId = useStore((s) => s.activeCanvasId);
@@ -26,7 +27,7 @@ export function Canvas() {
   });
   const collapsedHubs = useStore((s) => {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
-    return canvas?.collapsedHubs || [];
+    return canvas?.collapsedHubs ?? EMPTY_HUBS;
   });
   const setViewport = useStore((s) => s.setViewport);
   const setSelectedId = useStore((s) => s.setSelectedId);
@@ -388,7 +389,6 @@ export function Canvas() {
 
   return (
     <>
-      <SimilarityCanvas hiddenIds={hiddenIds} />
       <div
         onMouseDown={onMouseDown}
         onWheel={onWheel}
@@ -414,6 +414,7 @@ export function Canvas() {
         >
           <Background />
           <Particles />
+          <SimilarityLines hiddenIds={hiddenIds} />
           <ConnectionLines hiddenIds={hiddenIds} />
           {ideas.map((idea) => (
             <IdeaNode
