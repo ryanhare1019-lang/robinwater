@@ -7,6 +7,88 @@ interface Props {
   ghost: GhostNode;
 }
 
+interface GhostStyle {
+  border: string;
+  background: string;
+  textColor: string;
+  label: string;
+  labelColor: string;
+  acceptHoverColor: string;
+  pulseAnimation: string;
+  tooltipPrefix: string;
+}
+
+function getGhostStyle(type: GhostNode['type'], questionType?: string): GhostStyle {
+  switch (type) {
+    case 'synthesis':
+      return {
+        border: '1px dashed #2A2A3A',
+        background: 'rgba(10,10,14,0.5)',
+        textColor: '#8888AA',
+        label: '◆ SYNTHESIS',
+        labelColor: '#4466AA',
+        acceptHoverColor: '#4466AA',
+        pulseAnimation: 'ghost-pulse-slow 3s ease-in-out infinite',
+        tooltipPrefix: 'BRIDGES',
+      };
+    case 'wildcard':
+      return {
+        border: '1px dashed #3A2A1A',
+        background: 'rgba(14,10,8,0.5)',
+        textColor: '#AAAA77',
+        label: '✸ WILD CARD',
+        labelColor: '#CC8844',
+        acceptHoverColor: '#CC8844',
+        pulseAnimation: 'ghost-pulse-fast 2s ease-in-out infinite',
+        tooltipPrefix: 'INSPIRED BY',
+      };
+    case 'question':
+      return {
+        border: '1px dashed #3A3520',
+        background: 'rgba(10,10,10,0.5)',
+        textColor: '#888888',
+        label: `? ${questionType?.toUpperCase() || 'QUESTION'}`,
+        labelColor: '#CCAA44',
+        acceptHoverColor: '#CCAA44',
+        pulseAnimation: 'ghost-pulse-slow 3s ease-in-out infinite',
+        tooltipPrefix: 'QUESTION',
+      };
+    case 'extension':
+    default:
+      return {
+        border: '1px dashed #2A2A2A',
+        background: 'rgba(10,10,10,0.5)',
+        textColor: '#888888',
+        label: '✦ SUGGESTED',
+        labelColor: '#444444',
+        acceptHoverColor: '#44AA66',
+        pulseAnimation: 'ghost-pulse-slow 3s ease-in-out infinite',
+        tooltipPrefix: 'EXTENDS',
+      };
+  }
+}
+
+function buildTooltip(ghost: GhostNode, prefix: string): string {
+  switch (ghost.type) {
+    case 'synthesis': {
+      const themes = (ghost.bridgedClusterIds ?? [])
+        .map((ids) => ids[0] ?? '')
+        .filter(Boolean)
+        .slice(0, 2)
+        .join(' × ');
+      return themes
+        ? `${prefix}: ${themes} — ${ghost.reasoning}`
+        : `${prefix}: ${ghost.reasoning}`;
+    }
+    case 'wildcard':
+      return ghost.inspiration
+        ? `${prefix}: ${ghost.inspiration} — ${ghost.reasoning}`
+        : ghost.reasoning;
+    default:
+      return `${prefix}: ${ghost.reasoning}`;
+  }
+}
+
 export function GhostNodeCard({ ghost }: Props) {
   const acceptGhostNode = useStore((s) => s.acceptGhostNode);
   const dismissGhostNode = useStore((s) => s.dismissGhostNode);
@@ -24,11 +106,10 @@ export function GhostNodeCard({ ghost }: Props) {
   const detailLevel = getDetailLevelWithHysteresis(zoom, detailLevelRef.current);
   detailLevelRef.current = detailLevel;
 
+  const style = getGhostStyle(ghost.type, ghost.questionType);
+
   const handleAccept = useCallback(
-    (e: React.MouseEvent) => {
-      e.stopPropagation();
-      acceptGhostNode(ghost.id);
-    },
+    (e: React.MouseEvent) => { e.stopPropagation(); acceptGhostNode(ghost.id); },
     [ghost.id, acceptGhostNode]
   );
 
@@ -36,24 +117,17 @@ export function GhostNodeCard({ ghost }: Props) {
     (e: React.MouseEvent) => {
       e.stopPropagation();
       setIsDismissing(true);
-      setTimeout(() => {
-        dismissGhostNode(ghost.id);
-      }, 200);
+      setTimeout(() => dismissGhostNode(ghost.id), 200);
     },
     [ghost.id, dismissGhostNode]
   );
 
-  const isQuestion = ghost.type === 'question';
-  const borderColor = isQuestion ? '#3A3520' : '#2A2A2A';
-  const bottomLabel = isQuestion
-    ? `? ${ghost.questionType?.toUpperCase() || 'QUESTION'}`
-    : '✦ SUGGESTED';
-  const labelColor = isQuestion ? '#CCAA44' : '#444444';
-
   const ghostText =
     detailLevel === 'minimal'
-      ? (ghost.text.length > 25 ? ghost.text.slice(0, 25) + '…' : ghost.text)
+      ? ghost.text.length > 25 ? ghost.text.slice(0, 25) + '…' : ghost.text
       : ghost.text;
+
+  const tooltipText = buildTooltip(ghost, style.tooltipPrefix);
 
   return (
     <div
@@ -67,15 +141,16 @@ export function GhostNodeCard({ ghost }: Props) {
         width: detailLevel === 'minimal' ? undefined : 180,
         maxWidth: detailLevel === 'minimal' ? 180 : undefined,
         padding: detailLevel === 'full' ? "12px" : detailLevel === 'compact' ? "8px 10px" : "5px 8px",
-        background: "rgba(10, 10, 10, 0.5)",
-        border: `1px dashed ${borderColor}`,
+        background: style.background,
+        border: style.border,
         borderRadius: 0,
         fontFamily: "var(--font-mono)",
         fontSize: "13px",
-        color: "#888888",
+        color: style.textColor,
         userSelect: "none",
-        opacity: isDismissing ? 0 : 0.65,
+        opacity: isDismissing ? 0 : undefined,
         transform: isDismissing ? "scale(0)" : "scale(1)",
+        animation: isDismissing ? undefined : style.pulseAnimation,
         transition: isDismissing
           ? "transform 0.2s ease-in, opacity 0.2s ease-in"
           : "opacity 0.15s ease, padding 0.15s ease",
@@ -84,15 +159,15 @@ export function GhostNodeCard({ ghost }: Props) {
         overflow: "hidden",
       }}
     >
-      {/* Reasoning tooltip above — shown on hover */}
-      {isHovered && ghost.reasoning && (
+      {/* Tooltip */}
+      {isHovered && tooltipText && (
         <div
           style={{
             position: "absolute",
             bottom: "100%",
             left: 0,
             marginBottom: 6,
-            maxWidth: 240,
+            maxWidth: 280,
             background: "#111111",
             border: "1px solid #1A1A1A",
             padding: "6px 8px",
@@ -106,7 +181,7 @@ export function GhostNodeCard({ ghost }: Props) {
             zIndex: 100,
           }}
         >
-          {ghost.reasoning}
+          {tooltipText}
         </div>
       )}
 
@@ -140,70 +215,40 @@ export function GhostNodeCard({ ghost }: Props) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <span
-            style={{
-              fontSize: "10px",
-              color: labelColor,
-              fontFamily: "var(--font-mono)",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-            }}
-          >
-            {bottomLabel}
+          <span style={{ fontSize: "10px", color: style.labelColor, fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+            {style.label}
           </span>
-
           <div style={{ display: "flex", gap: 6 }}>
-            {/* Accept button */}
             <button
               onMouseEnter={() => setAcceptHovered(true)}
               onMouseLeave={() => setAcceptHovered(false)}
               onClick={handleAccept}
               style={{
-                width: 28,
-                height: 28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                width: 28, height: 28,
+                display: "flex", alignItems: "center", justifyContent: "center",
                 background: "transparent",
-                border: `1px solid ${acceptHovered ? "#44AA66" : "#2A2A2A"}`,
-                color: acceptHovered ? "#44AA66" : "#444444",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-mono)",
-                padding: 0,
-                transition: "border-color 0.15s, color 0.15s",
-                flexShrink: 0,
+                border: `1px solid ${acceptHovered ? style.acceptHoverColor : "#2A2A2A"}`,
+                color: acceptHovered ? style.acceptHoverColor : "#444444",
+                cursor: "pointer", fontSize: "13px", fontFamily: "var(--font-mono)", padding: 0,
+                transition: "border-color 0.15s, color 0.15s", flexShrink: 0,
               }}
               title="Accept"
-            >
-              ✓
-            </button>
-
-            {/* Dismiss button */}
+            >✓</button>
             <button
               onMouseEnter={() => setDismissHovered(true)}
               onMouseLeave={() => setDismissHovered(false)}
               onClick={handleDismiss}
               style={{
-                width: 28,
-                height: 28,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
+                width: 28, height: 28,
+                display: "flex", alignItems: "center", justifyContent: "center",
                 background: "transparent",
                 border: `1px solid ${dismissHovered ? "#CC4444" : "#2A2A2A"}`,
                 color: dismissHovered ? "#CC4444" : "#444444",
-                cursor: "pointer",
-                fontSize: "13px",
-                fontFamily: "var(--font-mono)",
-                padding: 0,
-                transition: "border-color 0.15s, color 0.15s",
-                flexShrink: 0,
+                cursor: "pointer", fontSize: "13px", fontFamily: "var(--font-mono)", padding: 0,
+                transition: "border-color 0.15s, color 0.15s", flexShrink: 0,
               }}
               title="Dismiss"
-            >
-              ✕
-            </button>
+            >✕</button>
           </div>
         </div>
       </div>
