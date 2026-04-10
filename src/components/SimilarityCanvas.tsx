@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { getViewportBounds, lineIntersectsViewport } from "../utils/viewportCulling";
 
@@ -15,14 +15,15 @@ export function SimilarityCanvas({ hiddenIds }: SimilarityCanvasProps) {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.ideas ?? [];
   });
-  const zoom = useStore((s) => {
-    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
-    return canvas?.viewport.zoom ?? 1;
-  });
   const viewport = useStore((s) => {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.viewport ?? { x: 0, y: 0, zoom: 1 };
   });
+
+  const ideasById = useMemo(
+    () => new Map(ideas.map((i) => [i.id, i])),
+    [ideas]
+  );
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -44,9 +45,8 @@ export function SimilarityCanvas({ hiddenIds }: SimilarityCanvasProps) {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (lines.length === 0 || zoom < 0.3) return;
+    if (lines.length === 0 || viewport.zoom < 0.3) return;
 
-    const ideasById = new Map(ideas.map((i) => [i.id, i]));
     const vpBounds = getViewportBounds(viewport, w, h);
 
     ctx.save();
@@ -110,7 +110,7 @@ export function SimilarityCanvas({ hiddenIds }: SimilarityCanvasProps) {
     ctx.stroke();
 
     ctx.restore();
-  }, [lines, ideas, zoom, viewport, hiddenIds]);
+  }, [lines, ideasById, viewport, hiddenIds]);
 
   useEffect(() => {
     cancelAnimationFrame(rafRef.current);
@@ -128,7 +128,7 @@ export function SimilarityCanvas({ hiddenIds }: SimilarityCanvasProps) {
     return () => window.removeEventListener("resize", onResize);
   }, [draw]);
 
-  if (lines.length === 0 || zoom < 0.3) return null;
+  if (lines.length === 0 || viewport.zoom < 0.3) return null;
 
   return (
     <canvas
