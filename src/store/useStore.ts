@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition, TAG_COLORS, CanvasFolder } from "../types";
+import { Idea, Viewport, AppData, Canvas, Connection, CustomTag, GhostNode, AITagDefinition, TAG_COLORS, CanvasFolder, SuggestionMode } from "../types";
 import { AppConfig, loadConfig } from "../utils/config";
 import { extractKeywords } from "../utils/keywords";
 import { findPlacement, overlapsAny } from "../utils/placement";
@@ -144,6 +144,24 @@ interface AppState {
   setSuggestLoading: (v: boolean) => void;
   setQuestionsLoading: (v: boolean) => void;
 
+  // Active suggestion mode (drives loading text in UI)
+  activeSuggestMode: SuggestionMode | null;
+  setActiveSuggestMode: (m: SuggestionMode | null) => void;
+
+  // Per-type suggestion cooldowns (unix timestamp until which mode is cooling down)
+  suggestCooldowns: Record<SuggestionMode, number>;
+  setSuggestCooldown: (mode: SuggestionMode, until: number) => void;
+
+  // Off-screen ghost notification
+  offScreenGhosts: {
+    count: number;
+    type: 'synthesis' | 'wildcard';
+    direction: 'N' | 'S' | 'E' | 'W' | null;
+    ids: string[];
+  } | null;
+  setOffScreenGhosts: (v: AppState['offScreenGhosts']) => void;
+  clearOffScreenGhosts: () => void;
+
   // Auto-trigger timing
   lastAddedAt: number;
   lastAutoTriggerAt: number;
@@ -220,6 +238,9 @@ export const useStore = create<AppState>((set, get) => {
     ghostNodes: [],
     isSuggestLoading: false,
     isQuestionsLoading: false,
+    activeSuggestMode: null,
+    suggestCooldowns: { extend: 0, synthesize: 0, wildcard: 0, all: 0 },
+    offScreenGhosts: null,
     lastAddedAt: 0,
     lastAutoTriggerAt: 0,
     isAutoTagLoading: false,
@@ -449,6 +470,7 @@ export const useStore = create<AppState>((set, get) => {
           connectingFrom: null,
           similarityLines: computeSimilarityLines(canvas.ideas, canvas.connections),
           ghostNodes: [],
+          offScreenGhosts: null,
         });
       }
     },
@@ -604,12 +626,40 @@ export const useStore = create<AppState>((set, get) => {
         ...(questionTagId ? { tags: [questionTagId] } : {}),
       };
 
-      const relatedToId = ghost.relatedToId;
       let connections = canvas.connections;
-      if (relatedToId && canvas.ideas.find((i) => i.id === relatedToId)) {
-        const conn: Connection = { id: generateId(), sourceId: relatedToId, targetId: idea.id };
+
+      // Extension: connect to relatedToId
+      if (ghost.type !== 'synthesis' && ghost.relatedToId && canvas.ideas.find((i) => i.id === ghost.relatedToId)) {
+        const conn: Connection = { id: generateId(), sourceId: ghost.relatedToId, targetId: idea.id };
         connections = [...connections, conn];
       }
+
+      // Synthesis: connect to the closest idea in each bridged cluster
+      if (ghost.type === 'synthesis' && ghost.bridgedClusterIds) {
+        for (const clusterIds of ghost.bridgedClusterIds) {
+          let closestId: string | null = null;
+          let closestDist = Infinity;
+          for (const cid of clusterIds) {
+            const clusterIdea = canvas.ideas.find((i) => i.id === cid);
+            if (!clusterIdea) continue;
+            const dx = clusterIdea.x - idea.x;
+            const dy = clusterIdea.y - idea.y;
+            const dist = dx * dx + dy * dy;
+            if (dist < closestDist) { closestDist = dist; closestId = cid; }
+          }
+          if (closestId) {
+            const alreadyConnected = connections.some(
+              (c) =>
+                (c.sourceId === closestId && c.targetId === idea.id) ||
+                (c.sourceId === idea.id && c.targetId === closestId)
+            );
+            if (!alreadyConnected) {
+              connections = [...connections, { id: generateId(), sourceId: closestId, targetId: idea.id }];
+            }
+          }
+        }
+      }
+      // Wild card: no auto-connection (relatedToId is null, bridgedClusterIds is undefined)
 
       const ideas = [...canvas.ideas, idea];
       set({
@@ -632,6 +682,12 @@ export const useStore = create<AppState>((set, get) => {
     setSuggestLoading: (v) => set({ isSuggestLoading: v }),
 
     setQuestionsLoading: (v) => set({ isQuestionsLoading: v }),
+
+    setActiveSuggestMode: (m) => set({ activeSuggestMode: m }),
+    setSuggestCooldown: (mode, until) =>
+      set((state) => ({ suggestCooldowns: { ...state.suggestCooldowns, [mode]: until } })),
+    setOffScreenGhosts: (v) => set({ offScreenGhosts: v }),
+    clearOffScreenGhosts: () => set({ offScreenGhosts: null }),
 
     setLastAutoTriggerAt: (t) => set({ lastAutoTriggerAt: t }),
 
