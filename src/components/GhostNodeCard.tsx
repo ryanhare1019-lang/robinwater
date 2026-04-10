@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { GhostNode } from "../types";
+import { GhostNode, Idea } from "../types";
 import { useStore } from "../store/useStore";
 import { getDetailLevelWithHysteresis, type DetailLevel } from "../utils/zoom";
 
@@ -68,11 +68,14 @@ function getGhostStyle(type: GhostNode['type'], questionType?: string): GhostSty
   }
 }
 
-function buildTooltip(ghost: GhostNode, prefix: string): string {
+function buildTooltip(ghost: GhostNode, prefix: string, ideas: Idea[]): string {
   switch (ghost.type) {
     case 'synthesis': {
       const themes = (ghost.bridgedClusterIds ?? [])
-        .map((ids) => ids[0] ?? '')
+        .map((ids) => {
+          const ideaId = ids[0] ?? '';
+          return ideas.find((i) => i.id === ideaId)?.text ?? '';
+        })
         .filter(Boolean)
         .slice(0, 2)
         .join(' × ');
@@ -102,6 +105,10 @@ export function GhostNodeCard({ ghost }: Props) {
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
     return canvas?.viewport.zoom ?? 1;
   });
+  const ideas = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.ideas ?? [];
+  });
   const detailLevelRef = useRef<DetailLevel>('full');
   const detailLevel = getDetailLevelWithHysteresis(zoom, detailLevelRef.current);
   detailLevelRef.current = detailLevel;
@@ -127,7 +134,7 @@ export function GhostNodeCard({ ghost }: Props) {
       ? ghost.text.length > 25 ? ghost.text.slice(0, 25) + '…' : ghost.text
       : ghost.text;
 
-  const tooltipText = buildTooltip(ghost, style.tooltipPrefix);
+  const tooltipText = buildTooltip(ghost, style.tooltipPrefix, ideas);
 
   return (
     <div
