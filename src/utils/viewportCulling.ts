@@ -7,6 +7,10 @@ export interface ViewportBounds {
   bottom: number;
 }
 
+/**
+ * Convert viewport state + screen dimensions to a canvas-space bounding rect.
+ * Adds padding so lines approaching the edge aren't popped in/out abruptly.
+ */
 export function getViewportBounds(
   viewport: Viewport,
   screenWidth: number,
@@ -20,6 +24,10 @@ export function getViewportBounds(
   return { left, right, top, bottom };
 }
 
+/**
+ * Fast check: does the line segment (x1,y1)→(x2,y2) intersect the rect?
+ * Uses Cohen-Sutherland outcode clipping — no allocations, early exits.
+ */
 export function lineIntersectsViewport(
   x1: number,
   y1: number,
