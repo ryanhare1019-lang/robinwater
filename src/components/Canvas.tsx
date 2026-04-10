@@ -11,8 +11,23 @@ const ZOOM_MIN = 0.15;
 const ZOOM_MAX = 4.0;
 
 export function Canvas() {
-  const canvases = useStore((s) => s.canvases);
   const activeCanvasId = useStore((s) => s.activeCanvasId);
+  const ideas = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.ideas || [];
+  });
+  const connections = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.connections || [];
+  });
+  const viewport = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.viewport || { x: 0, y: 0, zoom: 1 };
+  });
+  const collapsedHubs = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.collapsedHubs || [];
+  });
   const setViewport = useStore((s) => s.setViewport);
   const setSelectedId = useStore((s) => s.setSelectedId);
   const selectedId = useStore((s) => s.selectedId);
@@ -26,10 +41,6 @@ export function Canvas() {
 
   const ghostNodes = useStore((s) => s.ghostNodes);
   const aiPanelOpen = useStore((s) => s.aiPanelOpen);
-  const canvas = canvases.find((c) => c.id === activeCanvasId);
-  const ideas = canvas?.ideas || [];
-  const connections = canvas?.connections || [];
-  const viewport = canvas?.viewport || { x: 0, y: 0, zoom: 1 };
 
   const { hubIds, hiddenIds, components } = useMemo(() => {
     // Build adjacency map
@@ -69,7 +80,6 @@ export function Canvas() {
     }
 
     // Compute hidden ideas (all non-hub members of collapsed hub clusters)
-    const collapsedHubs = canvas?.collapsedHubs || [];
     const hiddenIds = new Set<string>();
     for (const hubId of collapsedHubs) {
       const comp = components.find((c) => c.includes(hubId));
@@ -80,7 +90,7 @@ export function Canvas() {
     }
 
     return { hubIds, hiddenIds, components };
-  }, [ideas, connections, canvas?.collapsedHubs]);
+  }, [ideas, connections, collapsedHubs]);
 
   // Refs for direct DOM manipulation — avoids React re-renders during pan/zoom
   const transformRef = useRef<HTMLDivElement>(null);
@@ -412,7 +422,7 @@ export function Canvas() {
               isHidden={hiddenIds.has(idea.id)}
               isHub={hubIds.has(idea.id)}
               collapsedCount={
-                (canvas?.collapsedHubs || []).includes(idea.id)
+                collapsedHubs.includes(idea.id)
                   ? (components.find((c) => c.includes(idea.id))?.length ?? 1) - 1
                   : 0
               }
