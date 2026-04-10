@@ -105,7 +105,7 @@ jobs:
 
       - name: Install NSIS (Windows only)
         if: matrix.platform == 'windows-latest'
-        run: choco install nsis -y
+        run: winget install NSIS.NSIS --silent --accept-package-agreements --accept-source-agreements
 
       - name: Install frontend dependencies
         run: npm install
