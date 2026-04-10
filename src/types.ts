@@ -59,15 +59,20 @@ export interface Canvas {
   collapsedHubs?: string[];
 }
 
+export type SuggestionMode = 'extend' | 'synthesize' | 'wildcard' | 'all';
+
 export interface GhostNode {
   id: string;
   text: string;
-  relatedToId: string | null; // id of the idea it relates to
-  reasoning: string;          // shown as tooltip
+  type: 'extension' | 'synthesis' | 'wildcard' | 'question';
+  relatedToId: string | null;       // extension: source idea id; others: null
+  bridgedClusterIds?: string[][];   // synthesis only: [[ideaId,...],[ideaId,...]] per cluster
+                                    // resolved from Claude's text arrays in triggerSuggest
+  reasoning: string;
+  inspiration?: string;             // wildcard only
   x: number;
   y: number;
-  type: 'suggestion' | 'question'; // 'suggestion' for this task
-  questionType?: 'challenge' | 'expand' | 'connect'; // only for type === 'question'
+  questionType?: 'challenge' | 'expand' | 'connect'; // question nodes only — unchanged
 }
 
 export interface CanvasFolder {
