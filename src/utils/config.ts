@@ -21,7 +21,7 @@ const DEFAULT_CONFIG: AppConfig = {
   },
 };
 
-const CONFIG_FILENAME = 'robinwater-config.json';
+const CONFIG_FILENAME = 'monolite-config.json';
 
 export async function loadConfig(): Promise<AppConfig> {
   try {

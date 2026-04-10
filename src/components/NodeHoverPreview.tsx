@@ -13,10 +13,6 @@ const EMPTY_AI_DEFS: import("../types").AITagDefinition[] = [];
 
 export function NodeHoverPreview() {
   const hoverPreview = useStore((s) => s.hoverPreview);
-  const zoom = useStore((s) => {
-    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
-    return canvas?.viewport.zoom ?? 1;
-  });
   const idea = useStore((s) => {
     if (!s.hoverPreview) return null;
     const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
@@ -35,8 +31,7 @@ export function NodeHoverPreview() {
     return canvas?.aiTagDefinitions ?? EMPTY_AI_DEFS;
   });
 
-  // Don't show at full detail zoom (>= 0.65) or when no preview active
-  if (!hoverPreview || zoom >= 0.65 || !idea) return null;
+  if (!hoverPreview || !idea) return null;
 
   const { rect } = hoverPreview;
   const PREVIEW_WIDTH = 320;

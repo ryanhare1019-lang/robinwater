@@ -15,10 +15,10 @@ import { ShortcutsOverlay } from "./components/ShortcutsOverlay";
 import { useStore } from "./store/useStore";
 import { AppData, LegacyAppData } from "./types";
 import { loadConfig } from "./utils/config";
-import { triggerSuggest } from "./utils/triggerSuggest";
+import { triggerAutoSuggest } from "./utils/suggestions/triggerSuggest";
 import { checkForUpdate, UpdateInfo } from "./utils/updater";
 
-const DATA_FILE = "robinwater-data.json";
+const DATA_FILE = "monolite-data.json";
 
 function migrateV1(data: LegacyAppData): AppData {
   const id = crypto.randomUUID();
@@ -182,7 +182,7 @@ export function App() {
 
     if (autoTriggerTimer.current) clearTimeout(autoTriggerTimer.current);
     autoTriggerTimer.current = setTimeout(() => {
-      triggerSuggest('auto', newestIdeaTextRef.current);
+      triggerAutoSuggest(newestIdeaTextRef.current);
     }, AUTO_TRIGGER_DELAY_MS);
 
     return () => {

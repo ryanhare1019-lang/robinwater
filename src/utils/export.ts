@@ -10,7 +10,7 @@ export function buildDefaultFilename(canvasName: string, date: Date): string {
     .replace(/[^a-z0-9\-_]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
-  return `robinwater-export-${safe}-${yyyy}-${mm}-${dd}.txt`;
+  return `monolite-export-${safe}-${yyyy}-${mm}-${dd}.txt`;
 }
 
 export function buildExportText(canvas: Canvas, date: Date = new Date()): string {
@@ -27,7 +27,7 @@ export function buildExportText(canvas: Canvas, date: Date = new Date()): string
   ].join(':');
 
   lines.push('=====================================');
-  lines.push('ROBINWATER EXPORT');
+  lines.push('MONOLITE EXPORT');
   lines.push(`CANVAS: ${canvas.name}`);
   lines.push(`DATE: ${dateStr}`);
   lines.push('=====================================');
@@ -134,7 +134,7 @@ export function buildDefaultMarkdownFilename(canvasName: string, date: Date): st
     .replace(/[^a-z0-9\-_]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
-  return `robinwater-export-${safe}-${yyyy}-${mm}-${dd}.md`;
+  return `monolite-export-${safe}-${yyyy}-${mm}-${dd}.md`;
 }
 
 export function buildExportMarkdown(canvas: Canvas, date: Date = new Date()): string {

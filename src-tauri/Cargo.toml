@@ -1,10 +1,10 @@
 [package]
-name = "robinwater"
+name = "monolite"
 version = "2.1.0"
 edition = "2021"
 
 [lib]
-name = "robinwater_lib"
+name = "monolite_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

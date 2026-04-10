@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { IdeaNode } from "./IdeaNode";
 import { GhostNodeCard } from "./GhostNodeCard";
+import { GhostOffScreenBanner } from "./GhostOffScreenBanner";
 import { SimilarityLines } from "./SimilarityLines";
 import { ConnectionLines } from "./ConnectionLines";
 import { Background } from "./Background";
@@ -434,6 +435,16 @@ export function Canvas() {
           ))}
         </div>
       </div>
+      {aiPanelOpen && (
+        <div style={{
+          position: 'fixed',
+          bottom: 56,
+          right: 16,
+          zIndex: 200,
+        }}>
+          <GhostOffScreenBanner />
+        </div>
+      )}
       {deleteConfirmPending && (
         <div
           style={{

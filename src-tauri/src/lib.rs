@@ -2,7 +2,7 @@
 async fn download_and_run_installer(app: tauri::AppHandle, url: String) -> Result<(), String> {
     // Download the installer binary
     let client = reqwest::Client::builder()
-        .user_agent("Robinwater-Updater")
+        .user_agent("Monolite-Updater")
         .build()
         .map_err(|e| e.to_string())?;
 
@@ -13,7 +13,7 @@ async fn download_and_run_installer(app: tauri::AppHandle, url: String) -> Resul
     let filename = url
         .split('/')
         .last()
-        .unwrap_or("robinwater-setup")
+        .unwrap_or("monolite-setup")
         .to_string();
     let installer_path = std::env::temp_dir().join(&filename);
     std::fs::write(&installer_path, &bytes).map_err(|e| e.to_string())?;
@@ -76,9 +76,9 @@ fn install_and_relaunch(installer_path: &std::path::Path, _app_exe: &str) -> Res
         r#"
         MOUNT=$(hdiutil attach -quiet -nobrowse '{dmg}' | awk '/\/Volumes\//{{print $NF}}')
         if [ -z "$MOUNT" ]; then exit 1; fi
-        cp -R "$MOUNT"/Robinwater.app /Applications/
+        cp -R "$MOUNT"/Monolite.app /Applications/
         hdiutil detach "$MOUNT" -quiet
-        open /Applications/Robinwater.app
+        open /Applications/Monolite.app
         "#,
         dmg = dmg_sh
     );

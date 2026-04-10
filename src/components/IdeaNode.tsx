@@ -364,8 +364,8 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
       onMouseEnter={() => {
           if (entering || isDragging || isDeleting) return;
           setIsHovered(true);
-          // Schedule hover preview — only at compact/minimal zoom, not in connect mode
-          if (detailLevelRef.current !== 'full' && !connectingFrom && nodeRef.current) {
+          // Schedule hover preview — at any zoom level, not in connect mode
+          if (!connectingFrom && nodeRef.current) {
             const capturedRef = nodeRef.current;
             hoverTimer.current = setTimeout(() => {
               const rect = capturedRef.getBoundingClientRect();

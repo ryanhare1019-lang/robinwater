@@ -24,17 +24,17 @@ const emptyCanvas: Canvas = {
 describe('buildDefaultFilename', () => {
   it('lowercases and hyphenates canvas name', () => {
     const result = buildDefaultFilename('My Ideas', new Date(2026, 2, 29));
-    expect(result).toBe('robinwater-export-my-ideas-2026-03-29.txt');
+    expect(result).toBe('monolite-export-my-ideas-2026-03-29.txt');
   });
 
   it('strips special characters and collapses hyphens', () => {
     const result = buildDefaultFilename('Ideas & Stuff!', new Date(2026, 2, 29));
-    expect(result).toBe('robinwater-export-ideas-stuff-2026-03-29.txt');
+    expect(result).toBe('monolite-export-ideas-stuff-2026-03-29.txt');
   });
 
   it('collapses multiple spaces to a single hyphen', () => {
     const result = buildDefaultFilename('A  B', new Date(2026, 2, 29));
-    expect(result).toBe('robinwater-export-a-b-2026-03-29.txt');
+    expect(result).toBe('monolite-export-a-b-2026-03-29.txt');
   });
 });
 
@@ -142,12 +142,12 @@ describe('buildExportText', () => {
 describe('buildDefaultMarkdownFilename', () => {
   it('lowercases and hyphenates canvas name with .md extension', () => {
     const result = buildDefaultMarkdownFilename('My Ideas', new Date(2026, 2, 29));
-    expect(result).toBe('robinwater-export-my-ideas-2026-03-29.md');
+    expect(result).toBe('monolite-export-my-ideas-2026-03-29.md');
   });
 
   it('strips special characters and uses .md extension', () => {
     const result = buildDefaultMarkdownFilename('Ideas & Stuff!', new Date(2026, 2, 29));
-    expect(result).toBe('robinwater-export-ideas-stuff-2026-03-29.md');
+    expect(result).toBe('monolite-export-ideas-stuff-2026-03-29.md');
   });
 });
 

@@ -2,7 +2,7 @@ import { fetch } from "@tauri-apps/plugin-http";
 import { getVersion } from "@tauri-apps/api/app";
 
 const OWNER = "ryanhare1019-lang";
-const REPO = "robinwater";
+const REPO = "monolite";
 
 export interface UpdateInfo {
   version: string;
@@ -54,7 +54,7 @@ export async function checkForUpdate(): Promise<UpdateInfo | null> {
       {
         method: "GET",
         headers: {
-          "User-Agent": "Robinwater-Updater",
+          "User-Agent": "Monolite-Updater",
           Accept: "application/vnd.github+json",
         },
       }
