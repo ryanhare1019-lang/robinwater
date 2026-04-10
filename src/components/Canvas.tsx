@@ -2,7 +2,7 @@ import { useRef, useCallback, useEffect, useState } from "react";
 import { useStore } from "../store/useStore";
 import { IdeaNode } from "./IdeaNode";
 import { GhostNodeCard } from "./GhostNodeCard";
-import { SimilarityLines } from "./SimilarityLines";
+import { SimilarityCanvas } from "./SimilarityCanvas";
 import { ConnectionLines } from "./ConnectionLines";
 import { Background } from "./Background";
 import { Particles } from "./Particles";
@@ -375,6 +375,7 @@ export function Canvas() {
 
   return (
     <>
+      <SimilarityCanvas hiddenIds={hiddenIds} />
       <div
         onMouseDown={onMouseDown}
         onWheel={onWheel}
@@ -400,7 +401,6 @@ export function Canvas() {
         >
           <Background />
           <Particles />
-          <SimilarityLines hiddenIds={hiddenIds} />
           <ConnectionLines hiddenIds={hiddenIds} />
           {ideas.map((idea) => (
             <IdeaNode
