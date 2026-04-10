@@ -74,7 +74,7 @@ fn install_and_relaunch(installer_path: &std::path::Path, _app_exe: &str) -> Res
     // Mount DMG, copy app bundle to /Applications, unmount, relaunch
     let script = format!(
         r#"
-        MOUNT=$(hdiutil attach -quiet -nobrowse '{dmg}' | awk '/\/Volumes\//{print $NF}')
+        MOUNT=$(hdiutil attach -quiet -nobrowse '{dmg}' | awk '/\/Volumes\//{{print $NF}}')
         if [ -z "$MOUNT" ]; then exit 1; fi
         cp -R "$MOUNT"/Robinwater.app /Applications/
         hdiutil detach "$MOUNT" -quiet
