@@ -1,6 +1,6 @@
 import { fetch } from '@tauri-apps/plugin-http';
 
-const CLAUDE_MODEL = 'claude-haiku-4-5-20251001';
+const CLAUDE_HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 
 interface ClaudeMessage {
   role: 'user' | 'assistant';
@@ -11,7 +11,8 @@ export async function callClaude(
   apiKey: string,
   systemPrompt: string,
   messages: ClaudeMessage[],
-  maxTokens: number = 1024
+  maxTokens: number = 1024,
+  model: string = CLAUDE_HAIKU_MODEL
 ): Promise<string> {
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -22,7 +23,7 @@ export async function callClaude(
       'anthropic-dangerous-direct-browser-access': 'true',
     },
     body: JSON.stringify({
-      model: CLAUDE_MODEL,
+      model,
       max_tokens: maxTokens,
       system: systemPrompt,
       messages,
