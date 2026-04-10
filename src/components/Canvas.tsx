@@ -1,8 +1,8 @@
-import { useRef, useCallback, useEffect, useState } from "react";
+import { useRef, useCallback, useEffect, useState, useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { IdeaNode } from "./IdeaNode";
 import { GhostNodeCard } from "./GhostNodeCard";
-import { SimilarityLines } from "./SimilarityLines";
+import { SimilarityCanvas } from "./SimilarityCanvas";
 import { ConnectionLines } from "./ConnectionLines";
 import { Background } from "./Background";
 import { Particles } from "./Particles";
@@ -11,8 +11,23 @@ const ZOOM_MIN = 0.15;
 const ZOOM_MAX = 4.0;
 
 export function Canvas() {
-  const canvases = useStore((s) => s.canvases);
   const activeCanvasId = useStore((s) => s.activeCanvasId);
+  const ideas = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.ideas || [];
+  });
+  const connections = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.connections || [];
+  });
+  const viewport = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.viewport || { x: 0, y: 0, zoom: 1 };
+  });
+  const collapsedHubs = useStore((s) => {
+    const canvas = s.canvases.find((c) => c.id === s.activeCanvasId);
+    return canvas?.collapsedHubs || [];
+  });
   const setViewport = useStore((s) => s.setViewport);
   const setSelectedId = useStore((s) => s.setSelectedId);
   const selectedId = useStore((s) => s.selectedId);
@@ -26,58 +41,56 @@ export function Canvas() {
 
   const ghostNodes = useStore((s) => s.ghostNodes);
   const aiPanelOpen = useStore((s) => s.aiPanelOpen);
-  const canvas = canvases.find((c) => c.id === activeCanvasId);
-  const ideas = canvas?.ideas || [];
-  const connections = canvas?.connections || [];
-  const viewport = canvas?.viewport || { x: 0, y: 0, zoom: 1 };
 
-  // --- Cluster collapse logic ---
-  // Build adjacency map
-  const adj = new Map<string, Set<string>>();
-  for (const idea of ideas) adj.set(idea.id, new Set());
-  for (const conn of connections) {
-    adj.get(conn.sourceId)?.add(conn.targetId);
-    adj.get(conn.targetId)?.add(conn.sourceId);
-  }
+  const { hubIds, hiddenIds, components } = useMemo(() => {
+    // Build adjacency map
+    const adj = new Map<string, Set<string>>();
+    for (const idea of ideas) adj.set(idea.id, new Set());
+    for (const conn of connections) {
+      adj.get(conn.sourceId)?.add(conn.targetId);
+      adj.get(conn.targetId)?.add(conn.sourceId);
+    }
 
-  // Find connected components via BFS
-  const visited = new Set<string>();
-  const components: string[][] = [];
-  for (const idea of ideas) {
-    if (visited.has(idea.id)) continue;
-    const component: string[] = [];
-    const queue = [idea.id];
-    visited.add(idea.id);
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
-      component.push(curr);
-      for (const neighbor of adj.get(curr) ?? []) {
-        if (!visited.has(neighbor)) { visited.add(neighbor); queue.push(neighbor); }
+    // Find connected components via BFS
+    const visited = new Set<string>();
+    const components: string[][] = [];
+    for (const idea of ideas) {
+      if (visited.has(idea.id)) continue;
+      const component: string[] = [];
+      const queue = [idea.id];
+      visited.add(idea.id);
+      while (queue.length > 0) {
+        const curr = queue.shift()!;
+        component.push(curr);
+        for (const neighbor of adj.get(curr) ?? []) {
+          if (!visited.has(neighbor)) { visited.add(neighbor); queue.push(neighbor); }
+        }
+      }
+      components.push(component);
+    }
+
+    // Find hub of each cluster (most connections in the component)
+    const hubIds = new Set<string>();
+    for (const comp of components) {
+      if (comp.length < 2) continue;
+      const hub = comp.reduce((best, id) =>
+        (adj.get(id)?.size ?? 0) > (adj.get(best)?.size ?? 0) ? id : best
+      );
+      hubIds.add(hub);
+    }
+
+    // Compute hidden ideas (all non-hub members of collapsed hub clusters)
+    const hiddenIds = new Set<string>();
+    for (const hubId of collapsedHubs) {
+      const comp = components.find((c) => c.includes(hubId));
+      if (!comp) continue;
+      for (const id of comp) {
+        if (id !== hubId) hiddenIds.add(id);
       }
     }
-    components.push(component);
-  }
 
-  // Find hub of each cluster (most connections in the component)
-  const hubIds = new Set<string>();
-  for (const comp of components) {
-    if (comp.length < 2) continue;
-    const hub = comp.reduce((best, id) =>
-      (adj.get(id)?.size ?? 0) > (adj.get(best)?.size ?? 0) ? id : best
-    );
-    hubIds.add(hub);
-  }
-
-  // Compute hidden ideas (all non-hub members of collapsed hub clusters)
-  const collapsedHubs = canvas?.collapsedHubs || [];
-  const hiddenIds = new Set<string>();
-  for (const hubId of collapsedHubs) {
-    const comp = components.find((c) => c.includes(hubId));
-    if (!comp) continue;
-    for (const id of comp) {
-      if (id !== hubId) hiddenIds.add(id);
-    }
-  }
+    return { hubIds, hiddenIds, components };
+  }, [ideas, connections, collapsedHubs]);
 
   // Refs for direct DOM manipulation — avoids React re-renders during pan/zoom
   const transformRef = useRef<HTMLDivElement>(null);
@@ -375,6 +388,7 @@ export function Canvas() {
 
   return (
     <>
+      <SimilarityCanvas hiddenIds={hiddenIds} />
       <div
         onMouseDown={onMouseDown}
         onWheel={onWheel}
@@ -400,7 +414,6 @@ export function Canvas() {
         >
           <Background />
           <Particles />
-          <SimilarityLines hiddenIds={hiddenIds} />
           <ConnectionLines hiddenIds={hiddenIds} />
           {ideas.map((idea) => (
             <IdeaNode
