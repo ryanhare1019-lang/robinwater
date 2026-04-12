@@ -51,6 +51,7 @@ export interface Viewport {
 export interface Canvas {
   id: string;
   name: string;
+  description?: string;
   ideas: Idea[];
   connections: Connection[];
   viewport: Viewport;
