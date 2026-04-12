@@ -675,10 +675,6 @@ export function CanvasList() {
             >
               + NEW FOLDER
             </button>
-          </div>
-
-          {/* Import button */}
-          <div style={{ padding: "4px 16px 0" }}>
             <button
               onClick={handleImportMonolite}
               style={{
@@ -690,7 +686,7 @@ export function CanvasList() {
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
                 cursor: "pointer",
-                padding: "0 0 8px",
+                padding: "6px 0",
                 textAlign: "left",
                 transition: "color 0.1s ease",
               }}

@@ -10,9 +10,9 @@ const BASE_BUTTON_STYLE: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
   textTransform: "uppercase" as const,
   letterSpacing: "0.06em",
-  color: "#444444",
-  border: "1px solid #1A1A1A",
-  background: "#080808",
+  color: "var(--text-tertiary)",
+  border: "1px solid var(--border-default)",
+  background: "var(--bg-surface)",
   padding: "6px 10px",
   borderRadius: 0,
   cursor: "pointer",
@@ -182,14 +182,14 @@ export function AiControlsBar() {
       <button
         style={{
           ...BASE_BUTTON_STYLE,
-          color: isE ? '#CC4444' : '#444444',
+          color: isE ? 'var(--accent-red)' : 'var(--text-tertiary)',
           cursor: opts.loading ? 'default' : 'pointer',
           animation: opts.loading ? 'ai-btn-pulse 1.5s ease-in-out infinite' : undefined,
         }}
         onClick={opts.onClick}
         disabled={opts.loading}
-        onMouseEnter={(e) => { if (!opts.loading && !isE) { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.color = '#888888'; } }}
-        onMouseLeave={(e) => { if (!opts.loading && !isE) { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#444444'; } }}
+        onMouseEnter={(e) => { if (!opts.loading && !isE) { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+        onMouseLeave={(e) => { if (!opts.loading && !isE) { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-tertiary)'; } }}
       >{label}</button>
     );
   }
@@ -204,7 +204,7 @@ export function AiControlsBar() {
         <button
           style={{
             ...BASE_BUTTON_STYLE,
-            color: isErr ? '#CC4444' : '#444444',
+            color: isErr ? 'var(--accent-red)' : 'var(--text-tertiary)',
             borderRight: 'none',
             cursor: isSuggestLoading ? 'default' : 'pointer',
             animation: isSuggestLoading ? 'ai-btn-pulse 1.5s ease-in-out infinite' : undefined,
@@ -212,8 +212,8 @@ export function AiControlsBar() {
           }}
           onClick={() => handleSuggestMode('all')}
           disabled={isSuggestLoading}
-          onMouseEnter={(e) => { if (!isSuggestLoading && !isErr) { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.color = '#888888'; } }}
-          onMouseLeave={(e) => { if (!isSuggestLoading && !isErr) { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#444444'; } }}
+          onMouseEnter={(e) => { if (!isSuggestLoading && !isErr) { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+          onMouseLeave={(e) => { if (!isSuggestLoading && !isErr) { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-tertiary)'; } }}
         >
           {suggestMainLabel}
         </button>
@@ -225,7 +225,7 @@ export function AiControlsBar() {
             ...BASE_BUTTON_STYLE,
             width: 24,
             padding: 0,
-            borderLeft: '1px solid #1A1A1A',
+            borderLeft: '1px solid var(--border-default)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -233,8 +233,8 @@ export function AiControlsBar() {
             flexShrink: 0,
           }}
           onClick={() => setDropdownOpen((o) => !o)}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.color = '#888888'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#444444'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
         >
           ▾
         </button>
@@ -248,8 +248,8 @@ export function AiControlsBar() {
               bottom: '100%',
               left: 0,
               marginBottom: 4,
-              background: '#0E0E0E',
-              border: '1px solid #222222',
+              background: 'var(--bg-raised)',
+              border: '1px solid var(--border-default)',
               borderRadius: 0,
               zIndex: 1000,
               minWidth: 170,
@@ -268,18 +268,18 @@ export function AiControlsBar() {
                   padding: '8px 14px',
                   background: 'transparent',
                   border: 'none',
-                  borderTop: i > 0 ? '1px solid #1A1A1A' : 'none',
+                  borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none',
                   fontFamily: 'var(--font-mono)',
                   fontSize: 11,
                   textTransform: 'uppercase' as const,
                   letterSpacing: '0.06em',
-                  color: '#888888',
+                  color: 'var(--text-secondary)',
                   cursor: 'pointer',
                   textAlign: 'left' as const,
                   whiteSpace: 'nowrap' as const,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#1A1A1A'; e.currentTarget.style.color = '#DDDDDD'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888888'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
               >
                 <span style={{ color: item.iconColor }}>{item.icon}</span>
                 {item.label}
@@ -294,14 +294,14 @@ export function AiControlsBar() {
         <button
           style={{
             ...BASE_BUTTON_STYLE,
-            color: autoTagError ? '#CC4444' : '#444444',
+            color: autoTagError ? 'var(--accent-red)' : 'var(--text-tertiary)',
             cursor: isAutoTagLoading ? 'default' : 'pointer',
             animation: isAutoTagLoading ? 'ai-btn-pulse 1.5s ease-in-out infinite' : undefined,
           }}
           onClick={handleAutoTag}
           disabled={isAutoTagLoading}
-          onMouseEnter={(e) => { if (!isAutoTagLoading && !autoTagError) { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.color = '#888888'; } }}
-          onMouseLeave={(e) => { if (!isAutoTagLoading && !autoTagError) { e.currentTarget.style.borderColor = '#1A1A1A'; e.currentTarget.style.color = '#444444'; } }}
+          onMouseEnter={(e) => { if (!isAutoTagLoading && !autoTagError) { e.currentTarget.style.borderColor = 'var(--border-strong)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+          onMouseLeave={(e) => { if (!isAutoTagLoading && !autoTagError) { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-tertiary)'; } }}
         >
           {autoTagLabel}
         </button>

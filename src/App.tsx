@@ -159,6 +159,13 @@ export function App() {
     }, 2000);
   }, []);
 
+  // Disable browser default context menu globally
+  useEffect(() => {
+    const handler = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener("contextmenu", handler);
+    return () => document.removeEventListener("contextmenu", handler);
+  }, []);
+
   // Re-apply theme whenever config.theme changes
   useEffect(() => {
     if (!config?.theme) return;
