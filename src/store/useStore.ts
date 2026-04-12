@@ -201,6 +201,13 @@ interface AppState {
   undo: () => void;
   redo: () => void;
 
+  // Import flash animation
+  importFlashIds: string[];
+  setImportFlashIds: (ids: string[]) => void;
+
+  // Import a canvas (new UUIDs already assigned by parseMonoliteFile)
+  importCanvas: (canvas: import('../utils/monoliteFile').MonoliteFileCanvas) => void;
+
   // Cluster collapse
   toggleClusterCollapse: (hubId: string) => void;
 }
@@ -868,6 +875,63 @@ export const useStore = create<AppState>((set, get) => {
         selectedId: null,
         selectedIds: [],
       });
+    },
+
+    importFlashIds: [],
+    setImportFlashIds: (ids) => set({ importFlashIds: ids }),
+
+    importCanvas: (fileCanvas) => {
+      const state = get();
+
+      // Resolve name collision: if name exists, append (2), (3), ...
+      let name = fileCanvas.name;
+      const existingNames = new Set(state.canvases.map((c) => c.name));
+      if (existingNames.has(name)) {
+        let n = 2;
+        while (existingNames.has(`${name} (${n})`)) n++;
+        name = `${name} (${n})`;
+      }
+
+      const newCanvas: Canvas = {
+        id: generateId(),
+        name,
+        ideas: fileCanvas.ideas,
+        connections: fileCanvas.connections,
+        viewport: { x: 0, y: 0, zoom: 1 },
+        tags: [],
+        aiTagDefinitions: fileCanvas.aiTagDefinitions,
+        collapsedHubs: [],
+      };
+
+      set((state) => ({
+        canvases: [...state.canvases, newCanvas],
+        activeCanvasId: newCanvas.id,
+        selectedId: null,
+        selectedIds: [],
+        newNodeId: null,
+        connectingFrom: null,
+        ghostNodes: [],
+        offScreenGhosts: null,
+        similarityLines: computeSimilarityLines(newCanvas.ideas, newCanvas.connections),
+        importFlashIds: newCanvas.ideas.map((i) => i.id),
+      }));
+
+      // Center viewport on midpoint of all ideas
+      if (newCanvas.ideas.length > 0) {
+        const midX = newCanvas.ideas.reduce((sum, i) => sum + i.x, 0) / newCanvas.ideas.length;
+        const midY = newCanvas.ideas.reduce((sum, i) => sum + i.y, 0) / newCanvas.ideas.length;
+        const vpX = -(midX - window.innerWidth / 2);
+        const vpY = -(midY - window.innerHeight / 2);
+        set((state) => ({
+          canvases: state.canvases.map((c) =>
+            c.id === newCanvas.id ? { ...c, viewport: { x: vpX, y: vpY, zoom: 1 } } : c
+          ),
+        }));
+      }
+
+      // Clear flash after animation completes (ideas.length * 50ms stagger + 600ms fade)
+      const clearDelay = newCanvas.ideas.length * 50 + 600;
+      setTimeout(() => set({ importFlashIds: [] }), clearDelay);
     },
 
     // Cluster collapse
