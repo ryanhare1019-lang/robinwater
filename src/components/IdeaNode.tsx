@@ -121,6 +121,9 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
   const isDeleting = deletingNodeId === idea.id;
   const isConnecting = connectingFrom !== null;
   const [entering, setEntering] = useState(isNew);
+  const importFlashIds = useStore((s) => s.importFlashIds);
+  const importIdx = importFlashIds.indexOf(idea.id);
+  const isImporting = importIdx >= 0;
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
@@ -429,6 +432,8 @@ export function IdeaNode({ idea, isHidden = false, isHub = false, collapsedCount
           : "border-color 0.2s ease, transform 0.15s var(--ease-out), opacity 0.15s ease, min-width 0.15s ease, max-width 0.15s ease",
         animation: entering
           ? "node-enter 0.45s var(--ease-spring) forwards, creation-glow 2.5s ease-out forwards"
+          : isImporting
+          ? `import-fade-in 0.4s var(--ease-out) ${importIdx * 50}ms both`
           : undefined,
         willChange: "transform, opacity",
         zIndex: isDragging ? 100 : isSelected ? 10 : isMultiSelected ? 5 : 1,
