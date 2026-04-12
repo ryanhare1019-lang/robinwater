@@ -165,6 +165,9 @@ export function RightSidebar() {
           onChange={(e) => {
             setTitleValue(e.target.value);
             autoGrow(titleRef.current);
+            if (selectedId && e.target.value.trim()) {
+              updateIdea(selectedId, { text: e.target.value });
+            }
           }}
           rows={1}
           style={{
@@ -209,6 +212,9 @@ export function RightSidebar() {
           onChange={(e) => {
             setDescValue(e.target.value);
             autoGrow(descRef.current);
+            if (selectedId) {
+              updateIdea(selectedId, { description: e.target.value });
+            }
           }}
           placeholder="add a description..."
           style={{
