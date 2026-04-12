@@ -782,7 +782,7 @@ export function CanvasList() {
               marginBottom: 6,
               userSelect: "none",
             }}>
-              MONOLITE v2.4.0
+              MONOLITE v2.4.1
             </div>
             <button
               onClick={() => setSettingsOpen(true)}
