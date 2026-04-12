@@ -44,6 +44,7 @@ function createDefaultCanvas(name = "Ideas"): Canvas {
   return {
     id: generateId(),
     name,
+    description: '',
     ideas: [],
     connections: [],
     viewport: { x: 0, y: 0, zoom: 1 },
@@ -91,6 +92,7 @@ interface AppState {
   addCanvas: (name?: string) => void;
   switchCanvas: (id: string) => void;
   renameCanvas: (id: string, name: string) => void;
+  updateCanvasDescription: (id: string, description: string) => void;
   deleteCanvas: (id: string) => void;
   setLeftSidebarOpen: (open: boolean) => void;
 
@@ -486,6 +488,14 @@ export const useStore = create<AppState>((set, get) => {
       set((state) => ({
         canvases: state.canvases.map((c) =>
           c.id === id ? { ...c, name } : c
+        ),
+      }));
+    },
+
+    updateCanvasDescription: (id, description) => {
+      set((state) => ({
+        canvases: state.canvases.map((c) =>
+          c.id === id ? { ...c, description } : c
         ),
       }));
     },
