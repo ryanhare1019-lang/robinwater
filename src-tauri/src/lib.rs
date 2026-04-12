@@ -41,6 +41,7 @@ fn install_and_relaunch(installer_path: &std::path::Path, app_exe: &str) -> Resu
     // Escape single quotes for PowerShell string literals
     let installer_ps = installer_str.replace('\'', "''");
     let app_ps = app_exe.replace('\'', "''");
+    let pid = std::process::id();
 
     let install_cmd = if ext == "msi" {
         format!(
@@ -52,10 +53,12 @@ fn install_and_relaunch(installer_path: &std::path::Path, app_exe: &str) -> Resu
         format!("Start-Process -Wait -FilePath '{}' -ArgumentList '/S'", installer_ps)
     };
 
-    // PowerShell one-liner: wait for this process to exit, run installer silently, relaunch app
+    // Wait for this process to exit by PID before running the installer.
+    // A fixed sleep was too short — the NSIS installer would try to overwrite Monolite.exe
+    // while it was still locked by the running process, causing a silent install failure.
     let script = format!(
-        "Start-Sleep -Milliseconds 800; {}; Start-Process -FilePath '{}'",
-        install_cmd, app_ps
+        "try {{ Wait-Process -Id {} -Timeout 30 }} catch {{}}; {}; Start-Process -FilePath '{}'",
+        pid, install_cmd, app_ps
     );
 
     std::process::Command::new("powershell")
@@ -102,18 +105,29 @@ fn install_and_relaunch(installer_path: &std::path::Path, app_exe: &str) -> Resu
         .to_lowercase();
 
     if ext == "appimage" {
-        // Make executable, replace current binary, relaunch
         std::fs::set_permissions(installer_path, std::fs::Permissions::from_mode(0o755))
             .map_err(|e| e.to_string())?;
+        // Writing to a running executable fails with ETXTBSY on Linux.
+        // Removing (unlinking) it first lets us write a new inode at the same path.
+        let _ = std::fs::remove_file(app_exe);
         std::fs::copy(installer_path, app_exe).map_err(|e| e.to_string())?;
         std::process::Command::new(app_exe)
             .spawn()
             .map_err(|e| format!("Failed to relaunch: {}", e))?;
     } else {
-        // .deb — launch installer (requires pkexec/gksudo for privilege escalation)
-        std::process::Command::new(installer_path)
+        // .deb archives cannot be executed directly — install via pkexec dpkg, then relaunch.
+        let deb_sh = installer_path.to_string_lossy().replace('\'', "'\\''");
+        let app_sh = app_exe.replace('\'', "'\\''");
+        std::process::Command::new("sh")
+            .args([
+                "-c",
+                &format!(
+                    "pkexec dpkg -i '{}' && nohup '{}' >/dev/null 2>&1 &",
+                    deb_sh, app_sh
+                ),
+            ])
             .spawn()
-            .map_err(|e| format!("Failed to launch installer: {}", e))?;
+            .map_err(|e| format!("Failed to launch dpkg installer: {}", e))?;
     }
 
     Ok(())

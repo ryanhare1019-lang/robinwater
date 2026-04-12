@@ -108,7 +108,8 @@ export function Canvas() {
 
   const applyTransform = useCallback((x: number, y: number, zoom: number) => {
     if (transformRef.current) {
-      transformRef.current.style.transform = `translate(${x}px, ${y}px) scale(${zoom})`;
+      transformRef.current.style.transform = `translate(${x}px, ${y}px)`;
+      transformRef.current.style.zoom = String(zoom);
     }
   }, []);
 
@@ -403,8 +404,8 @@ export function Canvas() {
         <div
           ref={transformRef}
           style={{
-            transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})`,
-            transformOrigin: "0 0",
+            transform: `translate(${viewport.x}px, ${viewport.y}px)`,
+            zoom: viewport.zoom,
             position: "absolute",
             top: 0,
             left: 0,
@@ -445,7 +446,7 @@ export function Canvas() {
           <GhostOffScreenBanner />
         </div>
       )}
-      {deleteConfirmPending && (
+      {deleteConfirmPending && selectedId && (
         <div
           style={{
             position: "fixed",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.tauri.app/config/v2/capability",
   "identifier": "default",
-  "description": "Default permissions for Robinwater",
+  "description": "Default permissions for Monolite",
   "windows": ["main"],
   "permissions": [
     "core:default",

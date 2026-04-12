@@ -87,7 +87,7 @@ export function UpdateModal({ update, onDismiss }: Props) {
         <div style={{ padding: "16px 14px" }}>
           <div style={{ marginBottom: 12, lineHeight: 1.6 }}>
             <span style={{ color: "var(--text-secondary)" }}>
-              Robinwater{" "}
+              Monolite{" "}
               <span style={{ color: "var(--text-primary)", fontWeight: 500 }}>
                 v{update.version}
               </span>{" "}
