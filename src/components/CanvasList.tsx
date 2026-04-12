@@ -438,6 +438,26 @@ export function CanvasList() {
             <span style={{ fontSize: "var(--label-size)", color: "var(--text-tertiary)" }}>
               {c.ideas.length}
             </span>
+            {canvases.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--text-tertiary)",
+                  fontSize: "var(--body-size)",
+                  fontFamily: "var(--font-mono)",
+                  cursor: "pointer",
+                  padding: "0 2px",
+                  opacity: 0.5,
+                  transition: "opacity 0.1s ease",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; }}
+              >
+                x
+              </button>
+            )}
             {/* Description line — only visible on hover */}
             {hoveredCanvasId === c.id && (
               <div
@@ -472,26 +492,6 @@ export function CanvasList() {
                   {c.description?.trim() || 'add a description...'}
                 </span>
               </div>
-            )}
-            {canvases.length > 1 && (
-              <button
-                onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--text-tertiary)",
-                  fontSize: "var(--body-size)",
-                  fontFamily: "var(--font-mono)",
-                  cursor: "pointer",
-                  padding: "0 2px",
-                  opacity: 0.5,
-                  transition: "opacity 0.1s ease",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; }}
-              >
-                x
-              </button>
             )}
           </>
         )}
