@@ -1,7 +1,7 @@
 import type { Canvas, Idea, Connection, AITagDefinition } from '../types';
 
 const SUPPORTED_VERSION = '1.0';
-const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_CHARS = 10 * 1024 * 1024; // 10M characters
 const LARGE_CANVAS_THRESHOLD = 5000;
 
 export interface MonoliteFileCanvas {
@@ -47,10 +47,13 @@ export function buildMonoliteFilename(canvasName: string): string {
 export function serializeCanvas(canvas: Canvas): string {
   const sanitizeIdea = (idea: Idea): Idea => ({
     ...idea,
-    text: stripHtmlTags(idea.text),
-    description: stripHtmlTags(idea.description),
+    text: stripHtmlSafe(idea.text),
+    description: stripHtmlSafe(idea.description),
   });
 
+  // Note: canvas.tags (custom color tags) are not exported — they are app-level
+  // organizational data tied to tag IDs that won't be valid on another installation.
+  // Only aiTagDefinitions (AI-generated semantic tags) are included in the share format.
   const file: MonoliteFile = {
     monolite_version: SUPPORTED_VERSION,
     exported_at: new Date().toISOString(),
@@ -73,13 +76,14 @@ function isValidIdea(idea: unknown): idea is Idea {
     typeof i.text === 'string' &&
     typeof i.x === 'number' &&
     typeof i.y === 'number' &&
-    typeof i.createdAt === 'string'
+    typeof i.createdAt === 'string' &&
+    (i.description == null || typeof i.description === 'string')
   );
 }
 
 export function parseMonoliteFile(raw: string): MonoliteParseResult {
   // Size check first
-  if (raw.length > MAX_FILE_BYTES) {
+  if (raw.length > MAX_FILE_CHARS) {
     return { ok: false, error: 'INVALID FILE: TOO LARGE (MAX 10MB)' };
   }
 
@@ -103,7 +107,9 @@ export function parseMonoliteFile(raw: string): MonoliteParseResult {
   }
 
   // Canvas object check
-  const canvasRaw = file.canvas as Record<string, unknown> | undefined;
+  const canvasRaw = (typeof file.canvas === 'object' && file.canvas !== null)
+    ? file.canvas as Record<string, unknown>
+    : undefined;
   if (!canvasRaw || typeof canvasRaw.name !== 'string' || !('ideas' in canvasRaw)) {
     return { ok: false, error: 'INVALID FILE: MISSING CANVAS DATA' };
   }
@@ -141,7 +147,7 @@ export function parseMonoliteFile(raw: string): MonoliteParseResult {
   // Remap connections — skip any referencing missing IDs
   const rawConnections = Array.isArray(canvasRaw.connections) ? canvasRaw.connections as unknown[] : [];
   const connections: Connection[] = rawConnections
-    .filter((c): c is { id: string; sourceId: string; targetId: string } =>
+    .filter((c): c is { sourceId: string; targetId: string } =>
       !!c && typeof c === 'object' &&
       typeof (c as Record<string, unknown>).sourceId === 'string' &&
       typeof (c as Record<string, unknown>).targetId === 'string'
@@ -156,7 +162,7 @@ export function parseMonoliteFile(raw: string): MonoliteParseResult {
   // Remap AI tag definitions
   const rawTags = Array.isArray(canvasRaw.aiTagDefinitions) ? canvasRaw.aiTagDefinitions as unknown[] : [];
   const aiTagDefinitions: AITagDefinition[] = rawTags
-    .filter((t): t is { id: string; label: string; color: string; ideaIds: string[] } =>
+    .filter((t): t is { label: string; color: string; ideaIds: string[] } =>
       !!t && typeof t === 'object' &&
       typeof (t as Record<string, unknown>).label === 'string' &&
       typeof (t as Record<string, unknown>).color === 'string' &&

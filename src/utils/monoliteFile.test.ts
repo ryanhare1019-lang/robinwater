@@ -67,10 +67,10 @@ describe('serializeCanvas', () => {
     expect(parsed.canvas.viewport).toBeUndefined();
   });
 
-  it('sanitizes HTML from idea text and description', () => {
+  it('sanitizes HTML from idea text and description (strips script content too)', () => {
     const json = serializeCanvas(makeCanvas());
     const parsed = JSON.parse(json);
-    expect(parsed.canvas.ideas[0].text).toBe('Hello alert(1)');
+    expect(parsed.canvas.ideas[0].text).toBe('Hello ');
     expect(parsed.canvas.ideas[0].description).toBe('A test');
   });
 });
@@ -223,5 +223,76 @@ describe('parseMonoliteFile', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.canvas.ideas[0].id).not.toBe('idea-1');
+  });
+
+  it('remaps connection sourceId and targetId to new UUIDs', () => {
+    const raw = JSON.stringify({
+      monolite_version: '1.0',
+      exported_at: '2026-04-11T00:00:00.000Z',
+      canvas: {
+        name: 'x',
+        ideas: [
+          { id: 'a', text: 'Idea A', description: '', x: 0, y: 0, createdAt: '2026-01-01T00:00:00.000Z', keywords: [] },
+          { id: 'b', text: 'Idea B', description: '', x: 10, y: 10, createdAt: '2026-01-01T00:00:00.000Z', keywords: [] },
+        ],
+        connections: [{ id: 'conn-old', sourceId: 'a', targetId: 'b' }],
+        aiTagDefinitions: [],
+      },
+    });
+    const result = parseMonoliteFile(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const ideaAId = result.canvas.ideas.find((i) => i.text === 'Idea A')!.id;
+    const ideaBId = result.canvas.ideas.find((i) => i.text === 'Idea B')!.id;
+    expect(result.canvas.connections).toHaveLength(1);
+    expect(result.canvas.connections[0].sourceId).toBe(ideaAId);
+    expect(result.canvas.connections[0].targetId).toBe(ideaBId);
+    expect(result.canvas.connections[0].id).not.toBe('conn-old');
+  });
+
+  it('remaps aiTagDefinition ideaIds to new UUIDs', () => {
+    const raw = JSON.stringify({
+      monolite_version: '1.0',
+      exported_at: '2026-04-11T00:00:00.000Z',
+      canvas: {
+        name: 'x',
+        ideas: [
+          { id: 'idea-orig', text: 'Idea', description: '', x: 0, y: 0, createdAt: '2026-01-01T00:00:00.000Z', keywords: [] },
+        ],
+        connections: [],
+        aiTagDefinitions: [
+          { id: 'tag-orig', label: 'STUFF', color: '#ff0000', ideaIds: ['idea-orig'] },
+        ],
+      },
+    });
+    const result = parseMonoliteFile(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const newIdeaId = result.canvas.ideas[0].id;
+    expect(result.canvas.aiTagDefinitions).toHaveLength(1);
+    expect(result.canvas.aiTagDefinitions[0].ideaIds).toContain(newIdeaId);
+    expect(result.canvas.aiTagDefinitions[0].ideaIds).not.toContain('idea-orig');
+    expect(result.canvas.aiTagDefinitions[0].id).not.toBe('tag-orig');
+  });
+
+  it('sets largeCanvasWarning when canvas has more than 5000 ideas', () => {
+    const ideas = Array.from({ length: 5001 }, (_, i) => ({
+      id: `idea-${i}`,
+      text: `Idea ${i}`,
+      description: '',
+      x: i,
+      y: i,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      keywords: [],
+    }));
+    const raw = JSON.stringify({
+      monolite_version: '1.0',
+      exported_at: '2026-04-11T00:00:00.000Z',
+      canvas: { name: 'Big', ideas, connections: [], aiTagDefinitions: [] },
+    });
+    const result = parseMonoliteFile(raw);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.largeCanvasWarning).toBe(true);
   });
 });
