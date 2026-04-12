@@ -61,6 +61,14 @@ export function CanvasList() {
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editFolderName, setEditFolderName] = useState("");
 
+  const updateCanvasDescription = useStore((s) => s.updateCanvasDescription);
+
+  const [hoveredCanvasId, setHoveredCanvasId] = useState<string | null>(null);
+  const [descEditId, setDescEditId] = useState<string | null>(null);
+  const [descEditValue, setDescEditValue] = useState('');
+  const [descEditPos, setDescEditPos] = useState<{ top: number } | null>(null);
+  const descInputRef = useRef<HTMLInputElement>(null);
+
   const importCanvas = useStore((s) => s.importCanvas);
 
   const [importPending, setImportPending] = useState<{
@@ -258,6 +266,34 @@ export function CanvasList() {
     };
   }, [ctxMenu]);
 
+  // Close description popover on click-outside or Escape
+  useEffect(() => {
+    if (!descEditId) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('[data-desc-popover]')) {
+        updateCanvasDescription(descEditId, descEditValue.trim());
+        setDescEditId(null);
+      }
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDescEditId(null); // cancel — do not save
+      }
+    };
+    window.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [descEditId, descEditValue, updateCanvasDescription]);
+
+  useEffect(() => {
+    if (descEditId) {
+      setTimeout(() => descInputRef.current?.focus(), 0);
+    }
+  }, [descEditId]);
+
   // Compute which canvases are in folders (for rendering root canvases)
   const canvasIdsInFolders = new Set(folders.flatMap((f) => f.canvasIds));
   const rootCanvases = canvases.filter((c) => !canvasIdsInFolders.has(c.id));
@@ -298,12 +334,15 @@ export function CanvasList() {
           transition: "background 0.1s ease",
           borderRadius: 0,
           position: "relative",
+          flexWrap: "wrap",
         }}
         onMouseEnter={(e) => {
-          if (!isActive) e.currentTarget.style.background = "var(--bg-hover)";
+          if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
+          setHoveredCanvasId(c.id);
         }}
         onMouseLeave={(e) => {
-          if (!isActive) e.currentTarget.style.background = "transparent";
+          if (!isActive) e.currentTarget.style.background = 'transparent';
+          setHoveredCanvasId(null);
         }}
       >
         {isConfirmDelete ? (
@@ -399,6 +438,41 @@ export function CanvasList() {
             <span style={{ fontSize: "var(--label-size)", color: "var(--text-tertiary)" }}>
               {c.ideas.length}
             </span>
+            {/* Description line — only visible on hover */}
+            {hoveredCanvasId === c.id && (
+              <div
+                style={{
+                  width: '100%',
+                  paddingLeft: indented ? 12 : 8,
+                  paddingBottom: 4,
+                  marginTop: -2,
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setDescEditId(c.id);
+                  setDescEditValue(c.description ?? '');
+                  setDescEditPos({ top: rect.top });
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontFamily: 'var(--font-mono)',
+                    color: 'var(--text-tertiary)',
+                    fontStyle: 'italic',
+                    cursor: 'text',
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    opacity: 0.7,
+                  }}
+                >
+                  {c.description?.trim() || 'add a description...'}
+                </span>
+              </div>
+            )}
             {canvases.length > 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
@@ -869,6 +943,74 @@ export function CanvasList() {
               </>
             );
           })()}
+        </div>
+      )}
+
+      {/* Description edit popover */}
+      {descEditId && descEditPos && (
+        <div
+          data-desc-popover=""
+          style={{
+            position: 'fixed',
+            left: 224,
+            top: descEditPos.top - 4,
+            zIndex: 3000,
+            background: 'var(--bg-raised)',
+            border: '1px solid var(--border-default)',
+            padding: '10px 12px',
+            width: 220,
+            boxShadow: '4px 4px 20px rgba(0,0,0,0.5)',
+          }}
+        >
+          <div
+            style={{
+              fontSize: 9,
+              fontFamily: 'var(--font-mono)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'var(--text-tertiary)',
+              marginBottom: 6,
+            }}
+          >
+            DESCRIPTION
+          </div>
+          <input
+            ref={descInputRef}
+            value={descEditValue}
+            onChange={(e) => setDescEditValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                updateCanvasDescription(descEditId, descEditValue.trim());
+                setDescEditId(null);
+              }
+              // Escape is handled by the window listener above
+            }}
+            placeholder="what is this canvas for?"
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: 'var(--bg-surface)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 0,
+              color: 'var(--text-primary)',
+              fontSize: 'var(--body-size)',
+              fontFamily: 'var(--font-mono)',
+              padding: '5px 7px',
+              outline: 'none',
+            }}
+          />
+          <div
+            style={{
+              fontSize: 9,
+              fontFamily: 'var(--font-mono)',
+              color: 'var(--text-tertiary)',
+              marginTop: 5,
+              textAlign: 'right',
+              opacity: 0.7,
+            }}
+          >
+            enter to save · esc to cancel
+          </div>
         </div>
       )}
 
