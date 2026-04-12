@@ -12,7 +12,9 @@
     "fs:allow-exists",
     "fs:allow-mkdir",
     "dialog:allow-save",
+    "dialog:allow-open",
     "fs:allow-write-text-file",
+    "fs:allow-read-text-file",
     "http:default",
     {
       "identifier": "http:allow-fetch",
