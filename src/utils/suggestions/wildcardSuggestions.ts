@@ -45,12 +45,15 @@ function extractTopThemes(ideas: Idea[], count = 5): string[] {
     .map(([kw]) => kw);
 }
 
-function buildUserMessage(canvasName: string, ideas: Idea[]): string {
+export function buildUserMessage(canvasName: string, ideas: Idea[], canvasDescription?: string): string {
   const themes = extractTopThemes(ideas);
   const sample = ideas.slice(-8);
 
   const lines: string[] = [];
-  lines.push(`Here's a summary of what's on my canvas "${canvasName}":`);
+  const canvasLabel = canvasDescription?.trim()
+    ? `${canvasName} — ${canvasDescription.trim()}`
+    : canvasName;
+  lines.push(`Here's a summary of what's on my canvas "${canvasLabel}":`);
   lines.push('');
 
   if (themes.length > 0) {
@@ -90,9 +93,10 @@ function parseResponse(raw: string): WildcardResult[] {
 export async function fetchWildcards(
   apiKey: string,
   canvasName: string,
-  ideas: Idea[]
+  ideas: Idea[],
+  canvasDescription?: string
 ): Promise<WildcardResult[]> {
-  const userMessage = buildUserMessage(canvasName, ideas);
+  const userMessage = buildUserMessage(canvasName, ideas, canvasDescription);
 
   const raw = await callClaude(
     apiKey,

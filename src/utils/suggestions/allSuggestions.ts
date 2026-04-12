@@ -66,7 +66,7 @@ function extractTopThemes(ideas: Idea[], count = 5): string[] {
     .map(([kw]) => kw);
 }
 
-function buildUserMessage(
+export function buildUserMessage(
   canvasName: string,
   ideas: Idea[],
   canvas: Canvas,
@@ -74,7 +74,10 @@ function buildUserMessage(
   standalone: Idea[]
 ): string {
   const lines: string[] = [];
-  lines.push(`Canvas: "${canvasName}"`);
+  const canvasLabel = canvas.description?.trim()
+    ? `${canvasName} — ${canvas.description.trim()}`
+    : canvasName;
+  lines.push(`Canvas: "${canvasLabel}"`);
   lines.push('');
 
   // Cluster context (for synthesis)

@@ -33,13 +33,17 @@ Respond ONLY with valid JSON, no markdown, no backticks, no preamble:
   ]
 }`;
 
-function buildUserMessage(
+export function buildUserMessage(
   canvasName: string,
   clusters: Cluster[],
-  standalone: Idea[]
+  standalone: Idea[],
+  canvasDescription?: string
 ): string {
   const lines: string[] = [];
-  lines.push(`Here are the ideas on my canvas "${canvasName}", organized by clusters:`);
+  const canvasLabel = canvasDescription?.trim()
+    ? `${canvasName} — ${canvasDescription.trim()}`
+    : canvasName;
+  lines.push(`Here are the ideas on my canvas "${canvasLabel}", organized by clusters:`);
   lines.push('');
 
   clusters.forEach((cluster, i) => {
@@ -84,9 +88,10 @@ export async function fetchSynthesis(
   apiKey: string,
   canvasName: string,
   clusters: Cluster[],
-  standalone: Idea[]
+  standalone: Idea[],
+  canvasDescription?: string
 ): Promise<SynthesisResult[]> {
-  const userMessage = buildUserMessage(canvasName, clusters, standalone);
+  const userMessage = buildUserMessage(canvasName, clusters, standalone, canvasDescription);
 
   const raw = await callClaude(
     apiKey,

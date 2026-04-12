@@ -20,7 +20,7 @@ Rules:
 Respond ONLY with valid JSON, no markdown, no backticks, no preamble:
 {"suggestions": [{"text": "the suggested idea text", "relatedTo": "the exact text of the existing idea this relates to most", "reasoning": "one sentence on why this is relevant"}]}`;
 
-function buildUserMessage(
+export function buildUserMessage(
   canvasName: string,
   ideas: Idea[],
   canvas: Canvas,
@@ -28,7 +28,10 @@ function buildUserMessage(
   newestIdeaText?: string
 ): string {
   const lines: string[] = [];
-  lines.push(`Here are the ideas currently on my canvas "${canvasName}":`);
+  const canvasLabel = canvas.description?.trim()
+    ? `${canvasName} — ${canvas.description.trim()}`
+    : canvasName;
+  lines.push(`Here are the ideas currently on my canvas "${canvasLabel}":`);
   lines.push('');
 
   for (const idea of ideas) {
