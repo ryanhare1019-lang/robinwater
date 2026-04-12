@@ -273,7 +273,7 @@ export async function triggerSuggest(mode: SuggestionMode): Promise<void> {
       const canSynthesize = allClusters.length >= 2 || ideas.length >= 6;
       if (!canSynthesize) return;
 
-      const suggestions = await fetchSynthesis(config.anthropicApiKey, canvas.name, multiClusters, standalone);
+      const suggestions = await fetchSynthesis(config.anthropicApiKey, canvas.name, multiClusters, standalone, canvas.description);
       const freshState = useStore.getState();
       if (freshState.activeCanvasId !== activeCanvasId) return;
       const freshCanvas = freshState.canvases.find((c) => c.id === activeCanvasId)!;
@@ -323,7 +323,7 @@ export async function triggerSuggest(mode: SuggestionMode): Promise<void> {
       }
 
     } else if (mode === 'wildcard') {
-      const suggestions = await fetchWildcards(config.anthropicApiKey, canvas.name, ideas);
+      const suggestions = await fetchWildcards(config.anthropicApiKey, canvas.name, ideas, canvas.description);
       const freshState = useStore.getState();
       if (freshState.activeCanvasId !== activeCanvasId) return;
       const freshCanvas = freshState.canvases.find((c) => c.id === activeCanvasId)!;
