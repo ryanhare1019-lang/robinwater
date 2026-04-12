@@ -881,6 +881,8 @@ export const useStore = create<AppState>((set, get) => {
     setImportFlashIds: (ids) => set({ importFlashIds: ids }),
 
     importCanvas: (fileCanvas) => {
+      undoStack.length = 0;
+      redoStack.length = 0;
       const state = get();
 
       // Resolve name collision: if name exists, append (2), (3), ...
