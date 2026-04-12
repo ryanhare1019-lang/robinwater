@@ -4,6 +4,11 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { useStore } from "../store/useStore";
 import { buildDefaultFilename, buildExportText, buildDefaultMarkdownFilename, buildExportMarkdown } from "../utils/export";
 import { SettingsModal } from "./SettingsModal";
+import { open } from "@tauri-apps/plugin-dialog";
+import { readTextFile } from "@tauri-apps/plugin-fs";
+import { serializeCanvas, buildMonoliteFilename, parseMonoliteFile } from "../utils/monoliteFile";
+import type { MonoliteFileCanvas } from "../utils/monoliteFile";
+import { MonoliteImportModal, MonoliteErrorModal } from "./MonoliteImportModal";
 
 const menuItemStyle: React.CSSProperties = {
   display: "block",
@@ -55,6 +60,21 @@ export function CanvasList() {
   // Folder editing state
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editFolderName, setEditFolderName] = useState("");
+
+  const importCanvas = useStore((s) => s.importCanvas);
+
+  const [importPending, setImportPending] = useState<{
+    canvas: MonoliteFileCanvas;
+    exportedAt: string;
+    skippedCount: number;
+    versionWarning: boolean;
+    largeCanvasWarning: boolean;
+  } | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importToast, setImportToast] = useState<string | null>(null);
+  const importToastTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [sharedId, setSharedId] = useState<string | null>(null);
+  const sharedTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const deleteTimer = useRef<ReturnType<typeof setTimeout>>();
   const exportTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -143,11 +163,75 @@ export function CanvasList() {
     }
   }, [canvases]);
 
+  const handleShareMonolite = useCallback(async (canvasId: string) => {
+    setCtxMenu(null);
+    const canvas = canvases.find((c) => c.id === canvasId);
+    if (!canvas) return;
+
+    try {
+      const filePath = await save({
+        defaultPath: buildMonoliteFilename(canvas.name),
+        filters: [{ name: 'Monolite Canvas', extensions: ['monolite'] }],
+      });
+      if (!filePath) return;
+
+      await writeTextFile(filePath, serializeCanvas(canvas));
+
+      setSharedId(canvasId);
+      if (sharedTimer.current) clearTimeout(sharedTimer.current);
+      sharedTimer.current = setTimeout(() => setSharedId(null), 2000);
+    } catch (err) {
+      console.error('Monolite export failed:', err);
+    }
+  }, [canvases]);
+
+  const handleImportMonolite = useCallback(async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'Monolite Canvas', extensions: ['monolite'] }],
+      });
+      if (!selected || typeof selected !== 'string') return;
+
+      const raw = await readTextFile(selected);
+      const result = parseMonoliteFile(raw);
+
+      if (!result.ok) {
+        setImportError(result.error);
+        return;
+      }
+
+      setImportPending({
+        canvas: result.canvas,
+        exportedAt: result.exportedAt,
+        skippedCount: result.skippedCount,
+        versionWarning: result.versionWarning,
+        largeCanvasWarning: result.largeCanvasWarning,
+      });
+    } catch (err) {
+      console.error('Monolite import failed:', err);
+      setImportError('IMPORT FAILED: COULD NOT READ FILE');
+    }
+  }, []);
+
+  const confirmImport = useCallback(() => {
+    if (!importPending) return;
+    importCanvas(importPending.canvas);
+    const name = importPending.canvas.name.toUpperCase();
+    const count = importPending.canvas.ideas.length;
+    setImportPending(null);
+    setImportToast(`✓ IMPORTED: ${name} (${count} ${count === 1 ? 'IDEA' : 'IDEAS'})`);
+    if (importToastTimer.current) clearTimeout(importToastTimer.current);
+    importToastTimer.current = setTimeout(() => setImportToast(null), 3000);
+  }, [importPending, importCanvas]);
+
   // Clear timers on unmount
   useEffect(() => {
     return () => {
       clearTimeout(deleteTimer.current);
       clearTimeout(exportTimer.current);
+      clearTimeout(sharedTimer.current);
+      clearTimeout(importToastTimer.current);
     };
   }, []);
 
@@ -593,15 +677,50 @@ export function CanvasList() {
             </button>
           </div>
 
+          {/* Import button */}
+          <div style={{ padding: "4px 16px 0" }}>
+            <button
+              onClick={handleImportMonolite}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--text-muted)",
+                fontSize: 10,
+                fontFamily: "var(--font-mono)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                cursor: "pointer",
+                padding: "0 0 8px",
+                textAlign: "left",
+                transition: "color 0.1s ease",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text-secondary)"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
+            >
+              ↓ IMPORT .MONOLITE
+            </button>
+          </div>
+
           {/* Settings button */}
           <div style={{ padding: "8px 16px 14px", borderTop: "1px solid var(--border-subtle)" }}>
+            <div style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: 9,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--text-muted)",
+              marginBottom: 6,
+              userSelect: "none",
+            }}>
+              MONOLITE v2.3.0
+            </div>
             <button
               onClick={() => setSettingsOpen(true)}
               style={{
-                background: "#080808",
-                border: "1px solid #1A1A1A",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-default)",
                 borderRadius: 0,
-                color: "#444444",
+                color: "var(--text-tertiary)",
                 fontSize: 11,
                 fontFamily: "var(--font-mono)",
                 textTransform: "uppercase",
@@ -613,12 +732,12 @@ export function CanvasList() {
                 transition: "border-color 0.1s ease, color 0.1s ease",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = "#333333";
-                e.currentTarget.style.color = "#666666";
+                e.currentTarget.style.borderColor = "var(--border-strong)";
+                e.currentTarget.style.color = "var(--text-secondary)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = "#1A1A1A";
-                e.currentTarget.style.color = "#444444";
+                e.currentTarget.style.borderColor = "var(--border-default)";
+                e.currentTarget.style.color = "var(--text-tertiary)";
               }}
             >
               ⚙ SETTINGS
@@ -658,6 +777,17 @@ export function CanvasList() {
             onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
           >
             ↗ EXPORT .MD
+          </button>
+          <button
+            onClick={() => handleShareMonolite(ctxMenu.canvasId)}
+            style={{
+              ...menuItemStyle,
+              color: sharedId === ctxMenu.canvasId ? '#44AA66' : 'var(--text-primary)',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-active)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; }}
+          >
+            {sharedId === ctxMenu.canvasId ? '✓ SHARED' : '↗ SHARE AS .MONOLITE'}
           </button>
 
           {/* Divider */}
@@ -755,6 +885,50 @@ export function CanvasList() {
             reloadConfig();
           }}
         />
+      )}
+
+      {/* Monolite import confirmation modal */}
+      {importPending && (
+        <MonoliteImportModal
+          canvas={importPending.canvas}
+          exportedAt={importPending.exportedAt}
+          skippedCount={importPending.skippedCount}
+          versionWarning={importPending.versionWarning}
+          largeCanvasWarning={importPending.largeCanvasWarning}
+          onConfirm={confirmImport}
+          onCancel={() => setImportPending(null)}
+        />
+      )}
+
+      {/* Monolite import error modal */}
+      {importError && (
+        <MonoliteErrorModal
+          message={importError}
+          onClose={() => setImportError(null)}
+        />
+      )}
+
+      {/* Import success toast */}
+      {importToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 56,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--bg-raised)',
+          border: '1px solid var(--border-default)',
+          padding: '8px 16px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 11,
+          letterSpacing: '0.06em',
+          color: '#44AA66',
+          textTransform: 'uppercase',
+          zIndex: 3500,
+          pointerEvents: 'none',
+          animation: 'chip-enter 0.2s ease forwards',
+        }}>
+          {importToast}
+        </div>
       )}
     </>
   );
